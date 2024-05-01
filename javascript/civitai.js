@@ -1,4 +1,5 @@
 (async function () {
+    return
     // #region [utils]
     const log = (...args) => console.log(`[civitai]`, ...args);
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
