@@ -51,15 +51,15 @@ try:
 except:
     pass
 
-print("")
-print("#######################################################################################################")
-print("Initializing Civitai Link")
-print("If submitting an issue on github, please provide the below text for debugging purposes:")
-print("")
-print(f"Python revision: {sys.version}")
-print(f"Civitai Link revision: {revision}")
-print(f"SD-WebUI revision: {app_revision}")
-print("")
+# print("")
+# print("#######################################################################################################")
+# print("Initializing Civitai Link")
+# print("If submitting an issue on github, please provide the below text for debugging purposes:")
+# print("")
+# print(f"Python revision: {sys.version}")
+# print(f"Civitai Link revision: {revision}")
+# print(f"SD-WebUI revision: {app_revision}")
+# print("")
 civitai_skip_install = os.environ.get('CIVITAI_SKIP_INSTALL', False)
 
 try:
@@ -75,5 +75,5 @@ if not civitai_skip_install:
         f"Couldn't install {name} requirements.")
 
 check_versions()
-print("")
-print("#######################################################################################################")
+# print("")
+# print("#######################################################################################################")
