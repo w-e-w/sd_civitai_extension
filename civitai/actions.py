@@ -1,9 +1,8 @@
-from modules import script_callbacks, shared
 from pathlib import Path
-import gradio as gr
 import threading
 import json
 from . import lib as civitai
+
 
 from modules import script_callbacks, shared
 
@@ -11,8 +10,6 @@ previewable_types = ['LORA', 'LoCon', 'Hypernetwork', 'TextualInversion', 'Check
 
 
 def load_previews():
-    download_missing_previews = shared.opts.data.get('civitai_download_previews', True)
-    if not download_missing_previews: return
     nsfw_previews = shared.opts.data.get('civitai_nsfw_previews', True)
 
     civitai.log(f"Check resources for missing preview images")
@@ -70,10 +67,6 @@ actionable_types = ['LORA', 'LoCon', 'Hypernetwork', 'TextualInversion', 'Checkp
 
 
 def load_info():
-    download_missing_previews = shared.opts.data.get('civitai_download_triggers', True)
-    if not download_missing_previews:
-        return
-
     civitai.log("Check resources for missing info files")
     resources = civitai.load_resource_list()
     resources = [r for r in resources if r['type'] in actionable_types]
