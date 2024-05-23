@@ -13,7 +13,7 @@ from modules.ui_extra_networks import extra_pages
 from modules.paths import models_path
 from civitai.models import Command, ResourceRequest
 
-#region shared variables
+# region shared variables
 try:
     base_url = shared.cmd_opts.civitai_endpoint
 except:
@@ -25,12 +25,15 @@ download_chunk_size = 8192
 cache_key = 'civitai'
 refresh_previews_function = None
 refresh_info_function = None
-#endregion
 
-#region Utils
+
+# endregion
+
+# region Utils
 def log(message):
     """Log a message to the console."""
     print(f'Civitai: {message}')
+
 
 def download_file(url, dest, on_progress=None):
     if os.path.exists(dest):
@@ -60,15 +63,17 @@ def download_file(url, dest, on_progress=None):
         f.close()
         shutil.move(f.name, dest)
     except OSError as e:
-       print(f"Could not write the preview file to {dst_dir}")
-       print(e)
+        print(f"Could not write the preview file to {dst_dir}")
+        print(e)
     finally:
         f.close()
         if os.path.exists(f.name):
             os.remove(f.name)
-#endregion Utils
 
-#region API
+
+# endregion Utils
+
+# region API
 def req(endpoint, method='GET', data=None, params=None, headers=None):
     """Make a request to the Civitai API."""
     if headers is None:
@@ -84,10 +89,11 @@ def req(endpoint, method='GET', data=None, params=None, headers=None):
         endpoint = '/' + endpoint
     if params is None:
         params = {}
-    response = requests.request(method, base_url+endpoint, data=data, params=params, headers=headers)
+    response = requests.request(method, base_url + endpoint, data=data, params=params, headers=headers)
     if response.status_code != 200:
         raise Exception(f'Error: {response.status_code} {response.text}')
     return response.json()
+
 
 def get_models(query, creator, tag, type, page=1, page_size=20, sort='Most Downloaded', period='AllTime'):
     """Get a list of models from the Civitai API."""
@@ -103,18 +109,22 @@ def get_models(query, creator, tag, type, page=1, page_size=20, sort='Most Downl
     })
     return response
 
+
 def get_all_by_hash(hashes: List[str]):
     response = req(f"/model-versions/by-hash", method='POST', data=hashes)
     return response
 
+
 def get_model_version(id):
     """Get a model version from the Civitai API."""
-    response = req('/model-versions/'+id)
+    response = req('/model-versions/' + id)
     return response
+
 
 def get_model_version_by_hash(hash: str):
     response = req(f"/model-versions/by-hash/{hash}")
     return response
+
 
 def get_creators(query, page=1, page_size=20):
     """Get a list of creators from the Civitai API."""
@@ -125,6 +135,7 @@ def get_creators(query, page=1, page_size=20):
     })
     return response
 
+
 def get_tags(query, page=1, page_size=20):
     """Get a list of tags from the Civitai API."""
     response = req('/tags', params={
@@ -133,32 +144,36 @@ def get_tags(query, page=1, page_size=20):
         'pageSize': page_size
     })
     return response
-#endregion API
 
-#region Get Utils
+
+# endregion API
+
+# region Get Utils
+
 def get_lora_dir():
-    lora_dir = shared.opts.data.get('civitai_folder_lora', shared.cmd_opts.lora_dir).strip()
-    if not lora_dir: lora_dir = shared.cmd_opts.lora_dir
-    return lora_dir
+    return shared.opts.civitai_folder_lora.strip() or shared.cmd_opts.lora_dir
+
 
 def get_locon_dir():
     try:
-        lyco_dir = shared.opts.data.get('civitai_folder_lyco', shared.cmd_opts.lyco_dir).strip()
-        if not lyco_dir: lyco_dir = shared.cmd_opts.lyco_dir
-        if not lyco_dir: lyco_dir = os.path.join(models_path, "LyCORIS"),
-        return lyco_dir
-    except:
+        return shared.opts.civitai_folder_lyco.strip() or shared.cmd_opts.lyco_dir or get_lora_dir()
+    except AttributeError:
         return get_lora_dir()
 
+
 def get_model_dir():
-    model_dir = shared.opts.data.get('civitai_folder_model', shared.cmd_opts.ckpt_dir)
-    if not model_dir: model_dir = shared.cmd_opts.ckpt_dir
-    if not model_dir: model_dir = sd_models.model_path
+    if not (model_dir := shared.opts.civitai_folder_model.strip()):
+        model_dir = shared.cmd_opts.ckpt_dir
+    if not model_dir:
+        model_dir = sd_models.model_path
     return model_dir.strip()
 
+
 def get_automatic_type(type: str):
-    if type == 'Hypernetwork': return 'hypernet'
+    if type == 'Hypernetwork':
+        return 'hypernet'
     return type.lower()
+
 
 def get_automatic_name(type: str, filename: str, folder: str):
     abspath = os.path.abspath(filename)
@@ -173,6 +188,7 @@ def get_automatic_name(type: str, filename: str, folder: str):
     if type == 'Checkpoint': return fullname
     return os.path.splitext(fullname)[0]
 
+
 def has_preview(filename: str):
     preview_exts = [".jpg", ".png", ".jpeg", ".gif"]
     preview_exts = [*preview_exts, *[".preview" + x for x in preview_exts]]
@@ -181,8 +197,10 @@ def has_preview(filename: str):
             return True
     return False
 
+
 def has_info(filename: str):
     return os.path.isfile(os.path.splitext(filename)[0] + '.json')
+
 
 def get_resources_in_folder(type, folder, exts=[], exts_exclude=[]):
     resources = []
@@ -204,11 +222,14 @@ def get_resources_in_folder(type, folder, exts=[], exts_exclude=[]):
         automatic_name = get_automatic_name(type, filename, folder)
         hash = hashes.sha256(filename, f"{automatic_type}/{automatic_name}")
 
-        resources.append({'type': type, 'name': name, 'hash': hash, 'path': filename, 'hasPreview': has_preview(filename), 'hasInfo': has_info(filename) })
+        resources.append({'type': type, 'name': name, 'hash': hash, 'path': filename, 'hasPreview': has_preview(filename), 'hasInfo': has_info(filename)})
 
     return resources
 
+
 resources = []
+
+
 def load_resource_list(types=['LORA', 'LoCon', 'Hypernetwork', 'TextualInversion', 'Checkpoint', 'VAE', 'Controlnet', 'Upscaler']):
     global resources
 
@@ -246,6 +267,7 @@ def load_resource_list(types=['LORA', 'LoCon', 'Hypernetwork', 'TextualInversion
 
     return resources
 
+
 def get_resource_by_hash(hash: str):
     resources = load_resource_list([])
 
@@ -255,6 +277,7 @@ def get_resource_by_hash(hash: str):
 
     return None
 
+
 def get_model_by_hash(hash: str):
     found = [info for info in sd_models.checkpoints_list.values() if hash == info.sha256 or hash == info.shorthash or hash == info.hash]
     if found:
@@ -262,13 +285,15 @@ def get_model_by_hash(hash: str):
 
     return None
 
-#endregion Get Utils
 
-#region Removing
+# endregion Get Utils
+
+# region Removing
 def remove_resource(resource: ResourceRequest):
     removed = None
     target = get_resource_by_hash(resource['hash'])
-    if target is None or target['type'] != resource['type']: removed = False
+    if target is None or target['type'] != resource['type']:
+        removed = False
     elif os.path.exists(target['path']):
         os.remove(target['path'])
         removed = True
@@ -281,18 +306,23 @@ def remove_resource(resource: ResourceRequest):
         elif resource['type'] == 'Hypernetwork':
             shared.reload_hypernetworks()
         # elif resource['type'] == 'LORA':
-            # TODO: reload LORA
+        # TODO: reload LORA
     elif removed == None:
         log(f'Resource not found')
-#endregion Removing
 
-#region Downloading
+
+# endregion Removing
+
+# region Downloading
+
+
 def load_if_missing(path, url, on_progress=None):
     if os.path.exists(path): return True
     if url is None: return False
 
     download_file(url, path, on_progress)
     return None
+
 
 def load_resource(resource: ResourceRequest, on_progress=None):
     resource['hash'] = resource['hash'].lower()
@@ -301,18 +331,27 @@ def load_resource(resource: ResourceRequest, on_progress=None):
         log(f'Already have resource: {resource["name"]}')
         return
 
-    resources.append({'type': resource['type'], 'name': resource['name'], 'hash': resource['hash'], 'downloading': True })
+    resources.append({'type': resource['type'], 'name': resource['name'], 'hash': resource['hash'], 'downloading': True})
 
-    if resource['type'] == 'Checkpoint': load_model(resource, on_progress)
-    elif resource['type'] == 'CheckpointConfig': load_model_config(resource, on_progress)
-    elif resource['type'] == 'Controlnet': load_controlnet(resource, on_progress)
-    elif resource['type'] == 'Upscaler': load_upscaler(resource, on_progress)
-    elif resource['type'] == 'Hypernetwork': load_hypernetwork(resource, on_progress)
-    elif resource['type'] == 'TextualInversion': load_textual_inversion(resource, on_progress)
-    elif resource['type'] == 'LORA': load_lora(resource, on_progress)
-    elif resource['type'] == 'LoCon': load_locon(resource, on_progress)
+    if resource['type'] == 'Checkpoint':
+        load_model(resource, on_progress)
+    elif resource['type'] == 'CheckpointConfig':
+        load_model_config(resource, on_progress)
+    elif resource['type'] == 'Controlnet':
+        load_controlnet(resource, on_progress)
+    elif resource['type'] == 'Upscaler':
+        load_upscaler(resource, on_progress)
+    elif resource['type'] == 'Hypernetwork':
+        load_hypernetwork(resource, on_progress)
+    elif resource['type'] == 'TextualInversion':
+        load_textual_inversion(resource, on_progress)
+    elif resource['type'] == 'LORA':
+        load_lora(resource, on_progress)
+    elif resource['type'] == 'LoCon':
+        load_locon(resource, on_progress)
 
     load_resource_list([resource['type']])
+
 
 def fetch_model_by_hash(hash: str):
     model_version = get_model_version_by_hash(hash)
@@ -329,8 +368,10 @@ def fetch_model_by_hash(hash: str):
     )
     load_resource(resource)
 
+
 def load_model_config(resource: ResourceRequest, on_progress=None):
     load_if_missing(os.path.join(get_model_dir(), resource['name']), resource['url'], on_progress)
+
 
 def load_model(resource: ResourceRequest, on_progress=None):
     model = get_model_by_hash(resource['hash'])
@@ -344,20 +385,24 @@ def load_model(resource: ResourceRequest, on_progress=None):
 
     return model
 
+
 def load_controlnet(resource: ResourceRequest, on_progress=None):
     isAvailable = load_if_missing(os.path.join(models_path, 'ControlNet', resource['name']), resource['url'], on_progress)
     # TODO: reload controlnet list - not sure best way to import this
     # if isAvailable is None:
-        # controlnet.list_available_models()
+    # controlnet.list_available_models()
+
 
 def load_upscaler(resource: ResourceRequest, on_progress=None):
     isAvailable = load_if_missing(os.path.join(models_path, 'ESRGAN', resource['name']), resource['url'], on_progress)
     # TODO: reload upscaler list - not sure best way to import this
     # if isAvailable is None:
-        # upscaler.list_available_models()
+    # upscaler.list_available_models()
+
 
 def load_textual_inversion(resource: ResourceRequest, on_progress=None):
     load_if_missing(os.path.join(shared.cmd_opts.embeddings_dir, resource['name']), resource['url'], on_progress)
+
 
 def load_lora(resource: ResourceRequest, on_progress=None):
     isAvailable = load_if_missing(os.path.join(get_lora_dir(), resource['name']), resource['url'], on_progress)
@@ -371,6 +416,7 @@ def load_lora(resource: ResourceRequest, on_progress=None):
             if refresh_info_function is not None:
                 refresh_info_function()
 
+
 def load_locon(resource: ResourceRequest, on_progress=None):
     isAvailable = load_if_missing(os.path.join(get_locon_dir(), resource['name']), resource['url'], on_progress)
     if isAvailable is None:
@@ -378,6 +424,7 @@ def load_locon(resource: ResourceRequest, on_progress=None):
         if page is not None:
             log('Refreshing Locons')
             page.refresh()
+
 
 def load_vae(resource: ResourceRequest, on_progress=None):
     # TODO: find by hash instead of name
@@ -388,6 +435,7 @@ def load_vae(resource: ResourceRequest, on_progress=None):
     if isAvailable is None:
         sd_vae.refresh_vae_list()
 
+
 def load_hypernetwork(resource: ResourceRequest, on_progress=None):
     full_path = os.path.join(shared.cmd_opts.hypernetwork_dir, resource['name']);
     if not full_path.endswith('.pt'): full_path += '.pt'
@@ -395,9 +443,10 @@ def load_hypernetwork(resource: ResourceRequest, on_progress=None):
     if isAvailable is None:
         shared.reload_hypernetworks()
 
-#endregion Downloading
 
-#region Selecting Resources
+# endregion Downloading
+
+# region Selecting Resources
 def select_model(resource: ResourceRequest):
     if shared.opts.data["sd_checkpoint_hash"] == resource['hash']: return
 
@@ -408,7 +457,9 @@ def select_model(resource: ResourceRequest):
     if model is not None:
         sd_models.load_model(model)
         shared.opts.save(shared.config_filename)
-    else: log('Could not find model and no URL was provided')
+    else:
+        log('Could not find model and no URL was provided')
+
 
 def select_vae(resource: ResourceRequest):
     # TODO: find by hash instead of name
@@ -427,9 +478,11 @@ def select_vae(resource: ResourceRequest):
     sd_vae.refresh_vae_list()
     sd_vae.load_vae(shared.sd_model, full_path)
 
+
 def clear_vae():
     log('Clearing VAE')
     sd_vae.clear_loaded_vae()
+
 
 def select_hypernetwork(resource: ResourceRequest):
     # TODO: find by hash instead of name
@@ -448,6 +501,7 @@ def select_hypernetwork(resource: ResourceRequest):
     shared.opts.save(shared.config_filename)
     shared.reload_hypernetworks()
 
+
 def clear_hypernetwork():
     if (shared.opts.sd_hypernetwork == 'None'): return
 
@@ -455,9 +509,11 @@ def clear_hypernetwork():
     shared.opts.sd_hypernetwork = 'None'
     shared.opts.save(shared.config_filename)
     shared.reload_hypernetworks()
-#endregion
 
-#region Resource Management
+
+# endregion
+
+# region Resource Management
 def update_resource_preview(hash: str, preview_url: str):
     resources = load_resource_list([])
     matches = [resource for resource in resources if hash.lower() == resource['hash']]
@@ -468,21 +524,26 @@ def update_resource_preview(hash: str, preview_url: str):
         preview_path = os.path.splitext(resource['path'])[0] + '.preview.png'
         download_file(preview_url, preview_path)
 
-#endregion Selecting Resources
 
-#region Activities
+# endregion Selecting Resources
+
+# region Activities
 activities = []
 activity_history_length = 10
-ignore_activity_types = ['resources:list','activities:list','activities:clear', 'activities:cancel']
+ignore_activity_types = ['resources:list', 'activities:list', 'activities:clear', 'activities:cancel']
+
+
 def add_activity(activity: Command):
     global activities
 
     if activity['type'] in ignore_activity_types: return
 
     existing_activity_index = [i for i, x in enumerate(activities) if x['id'] == activity['id']]
-    if len(existing_activity_index) > 0: activities[existing_activity_index[0]] = activity
-    else: activities.insert(0, activity)
+    if len(existing_activity_index) > 0:
+        activities[existing_activity_index[0]] = activity
+    else:
+        activities.insert(0, activity)
 
     if len(activities) > activity_history_length:
         activities.pop()
-#endregion
+# endregion

@@ -1,5 +1,4 @@
 import gradio as gr
-from civitai.link import on_civitai_link_key_changed
 from civitai import actions
 from modules import shared, script_callbacks
 
