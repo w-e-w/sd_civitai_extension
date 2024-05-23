@@ -114,11 +114,12 @@ def load_info():
             else:
                 sd_version = "unknown"
             data = {
-                "description": r['description'],
+                "description": "",
                 "sd version": sd_version,
                 "activation text": ", ".join(r['trainedWords']),
                 "preferred weight": 0.8,
                 "notes": "",
+                "html": r['description'],
             }
 
             matches = [resource for resource in missing_info if file_hash.lower() == resource['hash']]
