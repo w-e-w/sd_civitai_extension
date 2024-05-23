@@ -333,22 +333,23 @@ def load_resource(resource: ResourceRequest, on_progress=None):
 
     resources.append({'type': resource['type'], 'name': resource['name'], 'hash': resource['hash'], 'downloading': True})
 
-    if resource['type'] == 'Checkpoint':
-        load_model(resource, on_progress)
-    elif resource['type'] == 'CheckpointConfig':
-        load_model_config(resource, on_progress)
-    elif resource['type'] == 'Controlnet':
-        load_controlnet(resource, on_progress)
-    elif resource['type'] == 'Upscaler':
-        load_upscaler(resource, on_progress)
-    elif resource['type'] == 'Hypernetwork':
-        load_hypernetwork(resource, on_progress)
-    elif resource['type'] == 'TextualInversion':
-        load_textual_inversion(resource, on_progress)
-    elif resource['type'] == 'LORA':
-        load_lora(resource, on_progress)
-    elif resource['type'] == 'LoCon':
-        load_locon(resource, on_progress)
+    match resource['type']:
+        case 'Checkpoint':
+            load_model(resource, on_progress)
+        case 'CheckpointConfig':
+            load_model_config(resource, on_progress)
+        case 'Controlnet':
+            load_controlnet(resource, on_progress)
+        case 'Upscaler':
+            load_upscaler(resource, on_progress)
+        case 'Hypernetwork':
+            load_hypernetwork(resource, on_progress)
+        case 'TextualInversion':
+            load_textual_inversion(resource, on_progress)
+        case 'LORA':
+            load_lora(resource, on_progress)
+        case 'LoCon':
+            load_locon(resource, on_progress)
 
     load_resource_list([resource['type']])
 
