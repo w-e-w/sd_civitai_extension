@@ -8,19 +8,12 @@ import requests
 import glob
 
 from tqdm import tqdm
-from modules import shared, sd_models, sd_vae, hashes
+from modules import shared, sd_models, sd_vae, hashes, ui_extra_networks
 from modules.paths import models_path
 
-# region shared variables
-try:
-    base_url = shared.cmd_opts.civitai_endpoint
-except:
-    base_url = 'https://civitai.com/api/v1'
-
-connected = False
+base_url = shared.cmd_opts.civitai_endpoint
 user_agent = 'CivitaiLink:Automatic1111'
 download_chunk_size = 8192
-cache_key = 'civitai'
 
 
 # endregion
@@ -54,7 +47,7 @@ def download_file(url, dest, on_progress=None):
                 bar.update(pos)
                 if on_progress is not None:
                     should_stop = on_progress(current, total, start_time)
-                    if should_stop == True:
+                    if should_stop:
                         raise Exception('Download cancelled')
         f.close()
         shutil.move(f.name, dest)
@@ -66,8 +59,6 @@ def download_file(url, dest, on_progress=None):
         if os.path.exists(f.name):
             os.remove(f.name)
 
-
-# endregion Utils
 
 # region API
 def req(endpoint, method='GET', data=None, params=None, headers=None):
@@ -91,13 +82,13 @@ def req(endpoint, method='GET', data=None, params=None, headers=None):
     return response.json()
 
 
-def get_models(query, creator, tag, type, page=1, page_size=20, sort='Most Downloaded', period='AllTime'):
+def get_models(query, creator, tag, file_type, page=1, page_size=20, sort='Most Downloaded', period='AllTime'):
     """Get a list of models from the Civitai API."""
     response = req('/models', params={
         'query': query,
         'username': creator,
         'tag': tag,
-        'type': type,
+        'type': file_type,
         'sort': sort,
         'period': period,
         'page': page,
@@ -106,19 +97,19 @@ def get_models(query, creator, tag, type, page=1, page_size=20, sort='Most Downl
     return response
 
 
-def get_all_by_hash(hashes: List[str]):
-    response = req(f"/model-versions/by-hash", method='POST', data=hashes)
+def get_all_by_hash(file_hashes: List[str]):
+    response = req(f"/model-versions/by-hash", method='POST', data=file_hashes)
     return response
 
 
-def get_model_version(id):
+def get_model_version(_id):
     """Get a model version from the Civitai API."""
-    response = req('/model-versions/' + id)
+    response = req('/model-versions/' + _id)
     return response
 
 
-def get_model_version_by_hash(hash: str):
-    response = req(f"/model-versions/by-hash/{hash}")
+def get_model_version_by_hash(file_hash: str):
+    response = req(f"/model-versions/by-hash/{file_hash}")
     return response
 
 
@@ -142,36 +133,28 @@ def get_tags(query, page=1, page_size=20):
     return response
 
 
-# endregion API
-
-# region Get Utils
-
 def get_lora_dir():
-    return shared.opts.civitai_folder_lora.strip() or shared.cmd_opts.lora_dir
+    return shared.cmd_opts.lora_dir
 
 
 def get_locon_dir():
     try:
-        return shared.opts.civitai_folder_lyco.strip() or shared.cmd_opts.lyco_dir or get_lora_dir()
+        return shared.cmd_opts.lyco_dir or get_lora_dir()
     except AttributeError:
         return get_lora_dir()
 
 
 def get_model_dir():
-    if not (model_dir := shared.opts.civitai_folder_model.strip()):
-        model_dir = shared.cmd_opts.ckpt_dir
-    if not model_dir:
-        model_dir = sd_models.model_path
-    return model_dir.strip()
+    return shared.cmd_opts.ckpt_dir or sd_models.model_path
 
 
-def get_automatic_type(type: str):
-    if type == 'Hypernetwork':
+def get_automatic_type(file_type: str):
+    if file_type == 'Hypernetwork':
         return 'hypernet'
-    return type.lower()
+    return file_type.lower()
 
 
-def get_automatic_name(type: str, filename: str, folder: str):
+def get_automatic_name(file_type: str, filename: str, folder: str):
     abspath = os.path.abspath(filename)
     if abspath.startswith(folder):
         fullname = abspath.replace(folder, '')
@@ -181,15 +164,17 @@ def get_automatic_name(type: str, filename: str, folder: str):
     if fullname.startswith("\\") or fullname.startswith("/"):
         fullname = fullname[1:]
 
-    if type == 'Checkpoint': return fullname
+    if file_type == 'Checkpoint':
+        return fullname
     return os.path.splitext(fullname)[0]
 
 
 def has_preview(filename: str):
-    preview_exts = [".jpg", ".png", ".jpeg", ".gif"]
-    preview_exts = [*preview_exts, *[".preview" + x for x in preview_exts]]
+    ui_extra_networks.allowed_preview_extensions()
+    preview_exts = ui_extra_networks.allowed_preview_extensions()
+    preview_exts = [*preview_exts, *["preview." + x for x in preview_exts]]
     for ext in preview_exts:
-        if os.path.exists(os.path.splitext(filename)[0] + ext):
+        if os.path.exists(os.path.splitext(filename)[0] + '.' + ext):
             return True
     return False
 
@@ -198,8 +183,12 @@ def has_info(filename: str):
     return os.path.isfile(os.path.splitext(filename)[0] + '.json')
 
 
-def get_resources_in_folder(type, folder, exts=[], exts_exclude=[]):
-    resources = []
+def get_resources_in_folder(file_type, folder, exts=None, exts_exclude=None):
+    if exts_exclude is None:
+        exts_exclude = []
+    if exts is None:
+        exts = []
+    _resources = []
     os.makedirs(folder, exist_ok=True)
 
     candidates = []
@@ -209,30 +198,26 @@ def get_resources_in_folder(type, folder, exts=[], exts_exclude=[]):
         candidates = [x for x in candidates if not x.endswith(ext)]
 
     folder = os.path.abspath(folder)
-    automatic_type = get_automatic_type(type)
+    automatic_type = get_automatic_type(file_type)
     for filename in sorted(candidates):
         if os.path.isdir(filename):
             continue
 
         name = os.path.splitext(os.path.basename(filename))[0]
-        automatic_name = get_automatic_name(type, filename, folder)
-        hash = hashes.sha256(filename, f"{automatic_type}/{automatic_name}")
+        automatic_name = get_automatic_name(file_type, filename, folder)
+        file_hash = hashes.sha256(filename, f"{automatic_type}/{automatic_name}")
 
-        resources.append({'type': type, 'name': name, 'hash': hash, 'path': filename, 'hasPreview': has_preview(filename), 'hasInfo': has_info(filename)})
+        _resources.append({'type': file_type, 'name': name, 'hash': file_hash, 'path': filename, 'hasPreview': has_preview(filename), 'hasInfo': has_info(filename)})
 
-    return resources
+    return _resources
 
 
 resources = []
 
 
-def load_resource_list(types=['LORA', 'LoCon', 'Hypernetwork', 'TextualInversion', 'Checkpoint', 'VAE', 'Controlnet', 'Upscaler']):
+def load_resource_list(types=None):
     global resources
-
-    # If resources is empty and types is empty, load all types
-    # This is a helper to be able to get the resource list without
-    # having to worry about initialization. On subsequent calls, no work will be done
-    if len(resources) == 0 and len(types) == 0:
+    if types is None:
         types = ['LORA', 'LoCon', 'Hypernetwork', 'TextualInversion', 'Checkpoint', 'VAE', 'Controlnet', 'Upscaler']
 
     if 'LORA' in types:
@@ -264,23 +249,17 @@ def load_resource_list(types=['LORA', 'LoCon', 'Hypernetwork', 'TextualInversion
     return resources
 
 
-def get_model_by_hash(hash: str):
-    found = [info for info in sd_models.checkpoints_list.values() if hash == info.sha256 or hash == info.shorthash or hash == info.hash]
-    if found:
+def get_model_by_hash(file_hash: str):
+    if found := [info for info in sd_models.checkpoints_list.values() if file_hash == info.sha256 or file_hash == info.shorthash or file_hash == info.hash]:
         return found[0]
 
-    return None
 
-
-
-# region Resource Management
-def update_resource_preview(hash: str, preview_url: str):
-    resources = load_resource_list([])
-    matches = [resource for resource in resources if hash.lower() == resource['hash']]
-    if len(matches) == 0: return
+def update_resource_preview(file_hash: str, preview_url: str):
+    _resources = load_resource_list([])
+    if matches := [resource for resource in _resources if file_hash.lower() == resource['hash']]:
+        return
 
     for resource in matches:
         # download image and save to resource['path'] - ext + '.preview.png'
         preview_path = os.path.splitext(resource['path'])[0] + '.preview.png'
         download_file(preview_url, preview_path)
-

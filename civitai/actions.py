@@ -2,7 +2,7 @@ from . import lib as civitai
 from pathlib import Path
 import threading
 import json
-from modules import shared
+from modules import shared, errors
 
 previewable_types = ['LORA', 'LoCon', 'Hypernetwork', 'TextualInversion', 'Checkpoint']
 
@@ -25,11 +25,11 @@ def load_previews():
         for i in range(0, len(hashes), 100):
             batch = hashes[i:i + 100]
             results.extend(civitai.get_all_by_hash(batch))
-    except:
-        civitai.log("Failed to fetch preview images from Civitai")
+    except Exception:
+        errors.report('Failed to fetch preview images from Civitai', exc_info=True)
         return
 
-    if len(results) == 0:
+    if not results:
         civitai.log("No preview images found on Civitai")
         return
 
@@ -38,17 +38,22 @@ def load_previews():
     # update the resources with the new preview
     updated = 0
     for r in results:
-        if (r is None): continue
+        if r is None:
+            continue
 
         for file in r['files']:
-            if not 'hashes' in file or not 'SHA256' in file['hashes']: continue
-            hash = file['hashes']['SHA256']
-            if hash.lower() not in hashes: continue
+            if 'hashes' not in file or 'SHA256' not in file['hashes']:
+                continue
+            file_hash = file['hashes']['SHA256']
+            if file_hash.lower() not in hashes:
+                continue
             images = r['images']
-            if (nsfw_previews is False): images = [i for i in images if i['nsfw'] is False]
-            if (len(images) == 0): continue
+            if not nsfw_previews:
+                images = [i for i in images if i['nsfw'] is False]
+            if not images:
+                continue
             image_url = images[0]['url']
-            civitai.update_resource_preview(hash, image_url)
+            civitai.update_resource_preview(file_hash, image_url)
             updated += 1
 
     civitai.log(f"Updated {updated} preview images")
@@ -77,11 +82,12 @@ def load_info():
         for i in range(0, len(hashes), 100):
             batch = hashes[i:i + 100]
             results.extend(civitai.get_all_by_hash(batch))
-    except:
-        civitai.log("Failed to fetch info from Civitai")
+
+    except Exception:
+        errors.report('Failed to fetch info from Civitai', exc_info=True)
         return
 
-    if len(results) == 0:
+    if not results:
         civitai.log("No info found on Civitai")
         return
 
@@ -90,11 +96,11 @@ def load_info():
     # update the resources with the new info
     updated = 0
     for r in results:
-        if (r is None):
+        if r is None:
             continue
 
         for file in r['files']:
-            if not 'hashes' in file or not 'SHA256' in file['hashes']:
+            if 'hashes' not in file or 'SHA256' not in file['hashes']:
                 continue
             file_hash = file['hashes']['SHA256']
             if file_hash.lower() not in hashes:
@@ -117,12 +123,12 @@ def load_info():
                 "html": r['description'],
             }
 
-            matches = [resource for resource in missing_info if file_hash.lower() == resource['hash']]
-            if len(matches) == 0:
+            if not (matches := [resource for resource in missing_info if file_hash.lower() == resource['hash']]):
                 continue
 
             for resource in matches:
                 Path(resource['path']).with_suffix(".json").write_text(json.dumps(data, indent=4))
+
             updated += 1
 
     civitai.log(f"Updated {updated} info files")
