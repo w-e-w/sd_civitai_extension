@@ -260,11 +260,7 @@ def get_model_by_hash(file_hash: str):
 
 
 def update_resource_preview(file_hash: str, preview_url: str):
-    _resources = load_resource_list([])
-    if matches := [resource for resource in _resources if file_hash.lower() == resource['hash']]:
-        return
-
-    for resource in matches:
+    file_hash = file_hash.lower()
+    for resource in [resource for resource in load_resource_list([]) if file_hash == resource['hash']]:
         # download image and save to resource['path'] - ext + '.preview.png'
-        preview_path = os.path.splitext(resource['path'])[0] + '.preview.png'
-        download_file(preview_url, preview_path)
+        download_file(preview_url, f'{os.path.splitext(resource["path"])[0]}.preview{os.path.splitext(preview_url)[1]}')
