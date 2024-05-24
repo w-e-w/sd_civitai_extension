@@ -199,16 +199,21 @@ def get_resources_in_folder(file_type, folder, exts=None, exts_exclude=None):
 
     folder = os.path.abspath(folder)
     automatic_type = get_automatic_type(file_type)
-    for filename in sorted(candidates):
-        if os.path.isdir(filename):
-            continue
 
-        name = os.path.splitext(os.path.basename(filename))[0]
-        automatic_name = get_automatic_name(file_type, filename, folder)
-        file_hash = hashes.sha256(filename, f"{automatic_type}/{automatic_name}")
+    cmd_opts_no_hashing = shared.cmd_opts.no_hashing
+    shared.cmd_opts.no_hashing = False
+    try:
+        for filename in sorted(candidates):
+            if os.path.isdir(filename):
+                continue
 
-        _resources.append({'type': file_type, 'name': name, 'hash': file_hash, 'path': filename, 'hasPreview': has_preview(filename), 'hasInfo': has_info(filename)})
+            name = os.path.splitext(os.path.basename(filename))[0]
+            automatic_name = get_automatic_name(file_type, filename, folder)
+            file_hash = hashes.sha256(filename, f"{automatic_type}/{automatic_name}")
 
+            _resources.append({'type': file_type, 'name': name, 'hash': file_hash, 'path': filename, 'hasPreview': has_preview(filename), 'hasInfo': has_info(filename)})
+    finally:
+        shared.cmd_opts.no_hashing = cmd_opts_no_hashing
     return _resources
 
 
