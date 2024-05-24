@@ -8,7 +8,7 @@ previewable_types = ['LORA', 'LoCon', 'Hypernetwork', 'TextualInversion', 'Check
 
 
 def load_previews():
-    nsfw_previews = shared.opts.data.get('civitai_nsfw_previews', True)
+    nsfw_previews = shared.opts.civitai_nsfw_previews
 
     civitai.log(f"Check resources for missing preview images")
     resources = civitai.load_resource_list()
