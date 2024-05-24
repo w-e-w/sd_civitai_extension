@@ -18,7 +18,6 @@ class OptionButton(shared.OptionInfo):
 def on_ui_settings():
     section = ('civitai_link', "Civitai")
     shared.opts.add_option("civitai_nsfw_previews", shared.OptionInfo(True, "Download NSFW (adult) preview images", section=section))
-    shared.opts.add_option("civitai_download_missing_models", shared.OptionInfo(False, "Download missing models upon reading generation parameters from prompt", section=section))
     shared.opts.add_option("civitai_get_previews", OptionButton('get previews', actions.run_load_previews, section=section))
     shared.opts.add_option("civitai_get_metadata", OptionButton('get metadata', actions.run_get_load_info, section=section))
     shared.opts.add_option("civitai_get_previews_metadata", OptionButton('get previews and metadata', actions.run_get_info, section=section))
