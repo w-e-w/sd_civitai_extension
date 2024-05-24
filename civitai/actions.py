@@ -127,7 +127,7 @@ def load_info():
                 continue
 
             for resource in matches:
-                Path(resource['path']).with_suffix(".json").write_text(json.dumps(data, indent=4))
+                Path(resource['path']).with_suffix(".json").write_text(json.dumps(data, indent=4, ensure_ascii=False))
 
             updated += 1
 
