@@ -9,9 +9,7 @@ import glob
 
 from tqdm import tqdm
 from modules import shared, sd_models, sd_vae, hashes
-from modules.ui_extra_networks import extra_pages
 from modules.paths import models_path
-from civitai.models import Command, ResourceRequest
 
 # region shared variables
 try:
@@ -23,8 +21,6 @@ connected = False
 user_agent = 'CivitaiLink:Automatic1111'
 download_chunk_size = 8192
 cache_key = 'civitai'
-refresh_previews_function = None
-refresh_info_function = None
 
 
 # endregion
@@ -268,16 +264,6 @@ def load_resource_list(types=['LORA', 'LoCon', 'Hypernetwork', 'TextualInversion
     return resources
 
 
-def get_resource_by_hash(hash: str):
-    resources = load_resource_list([])
-
-    found = [resource for resource in resources if hash.lower() == resource['hash'] and ('downloading' not in resource or resource['downloading'] != True)]
-    if found:
-        return found[0]
-
-    return None
-
-
 def get_model_by_hash(hash: str):
     found = [info for info in sd_models.checkpoints_list.values() if hash == info.sha256 or hash == info.shorthash or hash == info.hash]
     if found:
@@ -286,233 +272,6 @@ def get_model_by_hash(hash: str):
     return None
 
 
-# endregion Get Utils
-
-# region Removing
-def remove_resource(resource: ResourceRequest):
-    removed = None
-    target = get_resource_by_hash(resource['hash'])
-    if target is None or target['type'] != resource['type']:
-        removed = False
-    elif os.path.exists(target['path']):
-        os.remove(target['path'])
-        removed = True
-
-    if removed == True:
-        log(f'Removed resource')
-        load_resource_list([resource['type']])
-        if resource['type'] == 'Checkpoint':
-            sd_models.list_models()
-        elif resource['type'] == 'Hypernetwork':
-            shared.reload_hypernetworks()
-        # elif resource['type'] == 'LORA':
-        # TODO: reload LORA
-    elif removed == None:
-        log(f'Resource not found')
-
-
-# endregion Removing
-
-# region Downloading
-
-
-def load_if_missing(path, url, on_progress=None):
-    if os.path.exists(path): return True
-    if url is None: return False
-
-    download_file(url, path, on_progress)
-    return None
-
-
-def load_resource(resource: ResourceRequest, on_progress=None):
-    resource['hash'] = resource['hash'].lower()
-    existing_resource = get_resource_by_hash(resource['hash'])
-    if existing_resource:
-        log(f'Already have resource: {resource["name"]}')
-        return
-
-    resources.append({'type': resource['type'], 'name': resource['name'], 'hash': resource['hash'], 'downloading': True})
-
-    match resource['type']:
-        case 'Checkpoint':
-            load_model(resource, on_progress)
-        case 'CheckpointConfig':
-            load_model_config(resource, on_progress)
-        case 'Controlnet':
-            load_controlnet(resource, on_progress)
-        case 'Upscaler':
-            load_upscaler(resource, on_progress)
-        case 'Hypernetwork':
-            load_hypernetwork(resource, on_progress)
-        case 'TextualInversion':
-            load_textual_inversion(resource, on_progress)
-        case 'LORA':
-            load_lora(resource, on_progress)
-        case 'LoCon':
-            load_locon(resource, on_progress)
-
-    load_resource_list([resource['type']])
-
-
-def fetch_model_by_hash(hash: str):
-    model_version = get_model_version_by_hash(hash)
-    if model_version is None:
-        log(f'Could not find model version with hash {hash}')
-        return None
-
-    file = [x for x in model_version['files'] if x['primary'] == True][0]
-    resource = ResourceRequest(
-        name=file['name'],
-        type='Checkpoint',
-        hash=file['hashes']['SHA256'],
-        url=file['downloadUrl']
-    )
-    load_resource(resource)
-
-
-def load_model_config(resource: ResourceRequest, on_progress=None):
-    load_if_missing(os.path.join(get_model_dir(), resource['name']), resource['url'], on_progress)
-
-
-def load_model(resource: ResourceRequest, on_progress=None):
-    model = get_model_by_hash(resource['hash'])
-    if model is not None:
-        log('Found model in model list')
-    if model is None and resource['url'] is not None:
-        log('Downloading model')
-        download_file(resource['url'], os.path.join(get_model_dir(), resource['name']), on_progress)
-        sd_models.list_models()
-        model = get_model_by_hash(resource['hash'])
-
-    return model
-
-
-def load_controlnet(resource: ResourceRequest, on_progress=None):
-    isAvailable = load_if_missing(os.path.join(models_path, 'ControlNet', resource['name']), resource['url'], on_progress)
-    # TODO: reload controlnet list - not sure best way to import this
-    # if isAvailable is None:
-    # controlnet.list_available_models()
-
-
-def load_upscaler(resource: ResourceRequest, on_progress=None):
-    isAvailable = load_if_missing(os.path.join(models_path, 'ESRGAN', resource['name']), resource['url'], on_progress)
-    # TODO: reload upscaler list - not sure best way to import this
-    # if isAvailable is None:
-    # upscaler.list_available_models()
-
-
-def load_textual_inversion(resource: ResourceRequest, on_progress=None):
-    load_if_missing(os.path.join(shared.cmd_opts.embeddings_dir, resource['name']), resource['url'], on_progress)
-
-
-def load_lora(resource: ResourceRequest, on_progress=None):
-    isAvailable = load_if_missing(os.path.join(get_lora_dir(), resource['name']), resource['url'], on_progress)
-    if isAvailable is None:
-        page = next(iter([x for x in extra_pages if x.name == "lora"]), None)
-        if page is not None:
-            log('Refreshing Loras')
-            page.refresh()
-            if refresh_previews_function is not None:
-                refresh_previews_function()
-            if refresh_info_function is not None:
-                refresh_info_function()
-
-
-def load_locon(resource: ResourceRequest, on_progress=None):
-    isAvailable = load_if_missing(os.path.join(get_locon_dir(), resource['name']), resource['url'], on_progress)
-    if isAvailable is None:
-        page = next(iter([x for x in extra_pages if x.name == "lora"]), None)
-        if page is not None:
-            log('Refreshing Locons')
-            page.refresh()
-
-
-def load_vae(resource: ResourceRequest, on_progress=None):
-    # TODO: find by hash instead of name
-    if not resource['name'].endswith('.pt'): resource['name'] += '.pt'
-    full_path = os.path.join(models_path, 'VAE', resource['name'])
-
-    isAvailable = load_if_missing(full_path, resource['url'], on_progress)
-    if isAvailable is None:
-        sd_vae.refresh_vae_list()
-
-
-def load_hypernetwork(resource: ResourceRequest, on_progress=None):
-    full_path = os.path.join(shared.cmd_opts.hypernetwork_dir, resource['name']);
-    if not full_path.endswith('.pt'): full_path += '.pt'
-    isAvailable = load_if_missing(full_path, resource['url'], on_progress)
-    if isAvailable is None:
-        shared.reload_hypernetworks()
-
-
-# endregion Downloading
-
-# region Selecting Resources
-def select_model(resource: ResourceRequest):
-    if shared.opts.data["sd_checkpoint_hash"] == resource['hash']: return
-
-    model = load_model(resource)
-
-    if shared.sd_model.sd_checkpoint_info.model_name == model.model_name:
-        return
-    if model is not None:
-        sd_models.load_model(model)
-        shared.opts.save(shared.config_filename)
-    else:
-        log('Could not find model and no URL was provided')
-
-
-def select_vae(resource: ResourceRequest):
-    # TODO: find by hash instead of name
-    if not resource['name'].endswith('.pt'): resource['name'] += '.pt'
-    full_path = os.path.join(models_path, 'VAE', resource['name'])
-
-    if sd_vae.loaded_vae_file is not None and sd_vae.get_filename(sd_vae.loaded_vae_file) == resource['name']:
-        log('VAE already loaded')
-        return
-
-    isAvailable = load_if_missing(full_path, resource['url'])
-    if not isAvailable:
-        log('Could not find VAE')
-        return
-
-    sd_vae.refresh_vae_list()
-    sd_vae.load_vae(shared.sd_model, full_path)
-
-
-def clear_vae():
-    log('Clearing VAE')
-    sd_vae.clear_loaded_vae()
-
-
-def select_hypernetwork(resource: ResourceRequest):
-    # TODO: find by hash instead of name
-    if shared.opts.sd_hypernetwork == resource['name']:
-        log('Hypernetwork already loaded')
-        return
-
-    full_path = os.path.join(shared.cmd_opts.hypernetwork_dir, resource['name']);
-    if not full_path.endswith('.pt'): full_path += '.pt'
-    isAvailable = load_if_missing(full_path, resource['url'])
-    if not isAvailable:
-        log('Could not find hypernetwork')
-        return
-
-    shared.opts.sd_hypernetwork = resource['name']
-    shared.opts.save(shared.config_filename)
-    shared.reload_hypernetworks()
-
-
-def clear_hypernetwork():
-    if (shared.opts.sd_hypernetwork == 'None'): return
-
-    log('Clearing hypernetwork')
-    shared.opts.sd_hypernetwork = 'None'
-    shared.opts.save(shared.config_filename)
-    shared.reload_hypernetworks()
-
-
-# endregion
 
 # region Resource Management
 def update_resource_preview(hash: str, preview_url: str):
@@ -525,26 +284,3 @@ def update_resource_preview(hash: str, preview_url: str):
         preview_path = os.path.splitext(resource['path'])[0] + '.preview.png'
         download_file(preview_url, preview_path)
 
-
-# endregion Selecting Resources
-
-# region Activities
-activities = []
-activity_history_length = 10
-ignore_activity_types = ['resources:list', 'activities:list', 'activities:clear', 'activities:cancel']
-
-
-def add_activity(activity: Command):
-    global activities
-
-    if activity['type'] in ignore_activity_types: return
-
-    existing_activity_index = [i for i, x in enumerate(activities) if x['id'] == activity['id']]
-    if len(existing_activity_index) > 0:
-        activities[existing_activity_index[0]] = activity
-    else:
-        activities.insert(0, activity)
-
-    if len(activities) > activity_history_length:
-        activities.pop()
-# endregion
