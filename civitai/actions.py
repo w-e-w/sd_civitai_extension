@@ -1,10 +1,8 @@
+from . import lib as civitai
 from pathlib import Path
 import threading
 import json
-from . import lib as civitai
-
-
-from modules import script_callbacks, shared
+from modules import shared
 
 previewable_types = ['LORA', 'LoCon', 'Hypernetwork', 'TextualInversion', 'Checkpoint']
 
@@ -54,9 +52,6 @@ def load_previews():
             updated += 1
 
     civitai.log(f"Updated {updated} preview images")
-
-
-civitai.refresh_previews_function = load_previews
 
 
 def run_load_previews():
@@ -131,9 +126,6 @@ def load_info():
             updated += 1
 
     civitai.log(f"Updated {updated} info files")
-
-
-civitai.refresh_info_function = load_info
 
 
 def run_get_load_info():
