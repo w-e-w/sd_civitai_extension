@@ -117,11 +117,12 @@ def load_info():
             data = {
                 "description": "",
                 "sd version": sd_version,
-                "activation text": ", ".join(s.strip() for s in r['trainedWords']),
+                "activation text": ", ".join(strip for s in r['trainedWords'] if (strip := s.strip())),
                 "preferred weight": 0.8,
                 "notes": "",
-                "html": r['description'],
             }
+            if r['description']:
+                data['html'] = r['description']
 
             if not (matches := [resource for resource in missing_info if file_hash.lower() == resource['hash']]):
                 continue
