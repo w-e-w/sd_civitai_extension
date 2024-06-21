@@ -117,7 +117,7 @@ def load_info():
             data = {
                 "description": "",
                 "sd version": sd_version,
-                "activation text": ", ".join(r['trainedWords']),
+                "activation text": ", ".join(s.strip() for s in r['trainedWords']),
                 "preferred weight": 0.8,
                 "notes": "",
                 "html": r['description'],
