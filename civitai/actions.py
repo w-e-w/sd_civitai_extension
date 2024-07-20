@@ -114,15 +114,23 @@ def load_info():
                 sd_version = "SDXL"
             else:
                 sd_version = "unknown"
+
+            trained_words = [strip for s in r['trainedWords'] if (strip := s.strip())]
+
+            notes = ''
+            if (model_id := r.get('modelId')) and (sub_id := r.get('id')):
+                notes += f'https://civitai.com/models/{model_id}?modelVersionId={sub_id}\n'
+            if trained_words:
+                notes += '\n'.join(trained_words) + '\n'
+
             data = {
-                "description": "",
-                "sd version": sd_version,
-                "activation text": ", ".join(strip for s in r['trainedWords'] if (strip := s.strip())),
-                "preferred weight": 0.8,
-                "notes": "",
+                'description': '',
+                'sd version': sd_version,
+                'activation text': ', '.join(trained_words),
+                'preferred weight': 0.8,
+                "notes": notes,
+                'civitai_metadata': r
             }
-            if r['description']:
-                data['html'] = r['description']
 
             if not (matches := [resource for resource in missing_info if file_hash.lower() == resource['hash']]):
                 continue
