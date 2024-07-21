@@ -10,13 +10,13 @@ previewable_types = ['LORA', 'LoCon', 'Hypernetwork', 'TextualInversion', 'Check
 def load_previews():
     nsfw_previews = shared.opts.civitai_nsfw_previews
 
-    civitai.log(f"Check resources for missing preview images")
+    civitai.log(f'Check resources for missing preview images')
     resources = civitai.load_resource_list()
     resources = [r for r in resources if r['type'] in previewable_types]
 
     # get all resources that are missing previews
     missing_previews = [r for r in resources if r['hasPreview'] is False]
-    civitai.log(f"Found {len(missing_previews)} resources missing preview images")
+    civitai.log(f'Found {len(missing_previews)} resources missing preview images')
     hashes = [r['hash'] for r in missing_previews]
 
     # split hashes into batches of 100 and fetch into results
@@ -30,10 +30,10 @@ def load_previews():
         return
 
     if not results:
-        civitai.log("No preview images found on Civitai")
+        civitai.log('No preview images found on Civitai')
         return
 
-    civitai.log(f"Found {len(results)} hash matches")
+    civitai.log(f'Found {len(results)} hash matches')
 
     # update the resources with the new preview
     updated = 0
@@ -56,7 +56,7 @@ def load_previews():
             civitai.update_resource_preview(file_hash, image_url)
             updated += 1
 
-    civitai.log(f"Updated {updated} preview images")
+    civitai.log(f'Updated {updated} preview images')
 
 
 def run_load_previews():
@@ -67,13 +67,13 @@ actionable_types = ['LORA', 'LoCon', 'Hypernetwork', 'TextualInversion', 'Checkp
 
 
 def load_info():
-    civitai.log("Check resources for missing info files")
+    civitai.log('Check resources for missing info files')
     resources = civitai.load_resource_list()
     resources = [r for r in resources if r['type'] in actionable_types]
 
     # get all resources that have no info files
     missing_info = [r for r in resources if r['hasInfo'] is False]
-    civitai.log(f"Found {len(missing_info)} resources missing info files")
+    civitai.log(f'Found {len(missing_info)} resources missing info files')
     hashes = [r['hash'] for r in missing_info]
 
     # split hashes into batches of 100 and fetch into results
@@ -88,10 +88,10 @@ def load_info():
         return
 
     if not results:
-        civitai.log("No info found on Civitai")
+        civitai.log('No info found on Civitai')
         return
 
-    civitai.log(f"Found {len(results)} hash matches")
+    civitai.log(f'Found {len(results)} hash matches')
 
     # update the resources with the new info
     updated = 0
@@ -106,14 +106,14 @@ def load_info():
             if file_hash.lower() not in hashes:
                 continue
 
-            if "SD 1" in r['baseModel']:
-                sd_version = "SD1"
-            elif "SD 2" in r['baseModel']:
-                sd_version = "SD2"
-            elif "SDXL" in r['baseModel']:
-                sd_version = "SDXL"
+            if 'SD 1' in r['baseModel']:
+                sd_version = 'SD1'
+            elif 'SD 2' in r['baseModel']:
+                sd_version = 'SD2'
+            elif 'SDXL' in r['baseModel']:
+                sd_version = 'SDXL'
             else:
-                sd_version = "unknown"
+                sd_version = 'unknown'
 
             trained_words = [strip for s in r['trainedWords'] if (strip := s.strip())]
 
@@ -128,7 +128,7 @@ def load_info():
                 'sd version': sd_version,
                 'activation text': ', '.join(trained_words),
                 'preferred weight': 0.8,
-                "notes": notes,
+                'notes': notes,
                 'civitai_metadata': r
             }
 
@@ -136,11 +136,11 @@ def load_info():
                 continue
 
             for resource in matches:
-                Path(resource['path']).with_suffix(".json").write_text(json.dumps(data, indent=4, ensure_ascii=False))
+                Path(resource['path']).with_suffix('.json').write_text(json.dumps(data, indent=4, ensure_ascii=False))
 
             updated += 1
 
-    civitai.log(f"Updated {updated} info files")
+    civitai.log(f'Updated {updated} info files')
 
 
 def run_get_load_info():
