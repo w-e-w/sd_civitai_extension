@@ -10,4 +10,8 @@ def get_installed_version(package):
 
 if get_installed_version('python-socketio') <= (5, 7, 2):
     from launch import run_pip
-    run_pip('install python-socketio')
+    run_pip('install python-socketio', 'Civitai: python-socketio')
+
+if get_installed_version('OpenCC'):
+    from launch import run_pip
+    run_pip('install OpenCC', 'Civitai: OpenCC')
