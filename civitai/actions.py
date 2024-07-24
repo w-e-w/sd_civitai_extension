@@ -124,7 +124,7 @@ def load_info():
                 notes += '\n'.join(trained_words) + '\n'
 
             data = {
-                'description': '',
+                'description': r.get('model', {}).get('name', ''),
                 'sd version': sd_version,
                 'activation text': ', '.join(trained_words),
                 'preferred weight': 0.8,
