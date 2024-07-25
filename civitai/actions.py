@@ -93,6 +93,9 @@ def load_info():
 
     civitai.log(f'Found {len(results)} hash matches')
 
+    from opencc import OpenCC
+    cc = OpenCC('s2tw')
+
     # update the resources with the new info
     updated = 0
     for r in results:
@@ -124,7 +127,7 @@ def load_info():
                 notes += '\n'.join(trained_words) + '\n'
 
             data = {
-                'description': r.get('model', {}).get('name', ''),
+                'description': cc.convert(r.get('model', {}).get('name', '')),
                 'sd version': sd_version,
                 'activation text': ', '.join(trained_words),
                 'preferred weight': 0.8,
