@@ -1,14 +1,15 @@
 from importlib import metadata
+from packaging.version import parse
 
 
 def get_installed_version(package):
     try:
         return tuple(map(int, metadata.version(package).split('.')))
     except Exception:
-        return (0,)
+        return None
 
 
-if get_installed_version('python-socketio') <= (5, 7, 2):
+if not (installed_version := get_installed_version('python-socketio')) and installed_version <= parse('5.2.7'):
     from launch import run_pip
     run_pip('install python-socketio', 'Civitai: python-socketio')
 
