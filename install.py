@@ -4,7 +4,7 @@ from packaging.version import parse
 
 def get_installed_version(package):
     try:
-        return tuple(map(int, metadata.version(package).split('.')))
+        return parse(metadata.version(package))
     except Exception:
         return None
 
