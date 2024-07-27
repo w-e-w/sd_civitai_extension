@@ -9,7 +9,7 @@ def get_installed_version(package):
         return None
 
 
-if not (installed_version := get_installed_version('python-socketio')) and installed_version <= parse('5.2.7'):
+if not (installed_version := get_installed_version('python-socketio')) or installed_version <= parse('5.2.7'):
     from launch import run_pip
     run_pip('install python-socketio', 'Civitai: python-socketio')
 
