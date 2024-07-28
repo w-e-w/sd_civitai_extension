@@ -3,6 +3,7 @@ from pathlib import Path
 import threading
 import json
 from modules import shared, errors
+from tqdm import tqdm
 
 previewable_types = ['LORA', 'LoCon', 'Hypernetwork', 'TextualInversion', 'Checkpoint']
 
@@ -37,7 +38,7 @@ def load_previews():
 
     # update the resources with the new preview
     updated = 0
-    for r in results:
+    for r in tqdm(results):
         if r is None:
             continue
 
@@ -98,7 +99,7 @@ def load_info():
 
     # update the resources with the new info
     updated = 0
-    for r in results:
+    for r in tqdm(results):
         if r is None:
             continue
 
