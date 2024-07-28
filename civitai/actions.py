@@ -119,7 +119,7 @@ def load_info():
             else:
                 sd_version = 'unknown'
 
-            trained_words = [strip for s in r['trainedWords'] if (strip := s.strip())]
+            trained_words = [strip for s in r['trainedWords'] if (strip := s.strip()).strip(',')]
 
             notes = ''
             if (model_id := r.get('modelId')) and (sub_id := r.get('id')):
