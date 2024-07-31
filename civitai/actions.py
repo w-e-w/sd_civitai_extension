@@ -65,6 +65,12 @@ def run_load_previews():
 
 
 actionable_types = ['LORA', 'LoCon', 'Hypernetwork', 'TextualInversion', 'Checkpoint']
+base_model_version = {
+    'SD 1': 'SD1',
+    'SD 2': 'SD2',
+    'SDXL': 'SDXL',
+    'SD 3': 'SD3',
+}
 
 
 def load_info():
@@ -110,14 +116,7 @@ def load_info():
             if file_hash.lower() not in hashes:
                 continue
 
-            if 'SD 1' in r['baseModel']:
-                sd_version = 'SD1'
-            elif 'SD 2' in r['baseModel']:
-                sd_version = 'SD2'
-            elif 'SDXL' in r['baseModel']:
-                sd_version = 'SDXL'
-            else:
-                sd_version = 'unknown'
+            sd_version = base_model_version.get(r['baseModel'], 'unknown')
 
             trained_words = [strip for s in r['trainedWords'] if (strip := s.strip()).strip(',')]
 
