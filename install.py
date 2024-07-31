@@ -11,7 +11,7 @@ def get_installed_version(package):
 
 if not (installed_version := get_installed_version('python-socketio')) or installed_version <= parse('5.2.7'):
     from launch import run_pip
-    run_pip('install python-socketio', 'Civitai: python-socketio')
+    run_pip('install -U python-socketio>=5.2.7', 'Civitai: python-socketio')
 
 if not get_installed_version('OpenCC'):
     from launch import run_pip
