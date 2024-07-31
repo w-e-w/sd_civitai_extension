@@ -131,7 +131,7 @@ def load_info():
                 'description': cc.convert(r.get('model', {}).get('name', '')),
                 'sd version': sd_version,
                 'activation text': ', '.join(trained_words),
-                'preferred weight': 0.8,
+                # 'preferred weight': 0.8,
                 'notes': notes,
                 'civitai_metadata': r
             }
