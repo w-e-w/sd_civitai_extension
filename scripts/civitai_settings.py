@@ -1,5 +1,5 @@
 import gradio as gr
-from civitai_ext import actions
+from civitai_ext import actions, opencc_utils
 from modules import shared, script_callbacks
 
 
@@ -21,6 +21,7 @@ def on_ui_settings():
     shared.opts.add_option("civitai_get_previews", OptionButton('get previews', actions.run_load_previews, section=section))
     shared.opts.add_option("civitai_get_metadata", OptionButton('get metadata', actions.run_get_load_info, section=section))
     shared.opts.add_option("civitai_get_previews_metadata", OptionButton('get previews and metadata', actions.run_get_info, section=section))
+    shared.opts.add_option("civitai_convert_chinese", shared.OptionInfo('Disable', 'Convert chinese characters auto-generated description', gr.Dropdown, lambda: {'choices': opencc_utils.read_config()}, section=section, refresh=opencc_utils.install_opencc))
 
 
 script_callbacks.on_ui_settings(on_ui_settings)

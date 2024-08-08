@@ -1,5 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
-from . import lib as civitai
+from . import lib as civitai, opencc_utils
 from pathlib import Path
 import json
 from modules import shared, errors
@@ -103,8 +103,7 @@ def load_info():
 
     civitai.log(f'Found {len(results)} hash matches')
 
-    from opencc import OpenCC
-    cc = OpenCC('s2tw')
+    cc = opencc_utils.converter()
 
     # update the resources with the new info
     updated = 0
