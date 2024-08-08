@@ -1,5 +1,5 @@
 import gradio as gr
-from civitai import actions
+from civitai_ext import actions
 from modules import shared, script_callbacks
 
 

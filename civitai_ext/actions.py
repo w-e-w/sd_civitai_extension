@@ -1,9 +1,10 @@
+from concurrent.futures import ThreadPoolExecutor
 from . import lib as civitai
 from pathlib import Path
-import threading
 import json
 from modules import shared, errors
 from tqdm import tqdm
+import gradio as gr
 
 previewable_types = ['LORA', 'LoCon', 'Hypernetwork', 'TextualInversion', 'Checkpoint']
 
@@ -61,7 +62,9 @@ def load_previews():
 
 
 def run_load_previews():
-    threading.Thread(target=load_previews).start()
+    with ThreadPoolExecutor() as executor:
+        executor.submit(load_previews)
+    gr.Info('Finished fetching preview images from Civitai')
 
 
 actionable_types = ['LORA', 'LoCon', 'Hypernetwork', 'TextualInversion', 'Checkpoint']
@@ -147,9 +150,13 @@ def load_info():
 
 
 def run_get_load_info():
-    threading.Thread(target=load_info).start()
+    with ThreadPoolExecutor() as executor:
+        executor.submit(load_info)
+    gr.Info('Finished fetching info from Civitai')
 
 
 def run_get_info():
-    run_load_previews()
-    run_get_load_info()
+    with ThreadPoolExecutor() as executor:
+        executor.submit(load_info)
+        executor.submit(load_previews)
+    gr.Info('Finished fetching info and preview images from Civitai')
