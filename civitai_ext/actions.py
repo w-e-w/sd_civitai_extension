@@ -1,5 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from . import lib as civitai, opencc_utils
+from datetime import datetime
 from pathlib import Path
 import json
 from modules import shared, errors
@@ -34,6 +35,8 @@ def load_previews():
     if not results:
         civitai.log('No preview images found on Civitai')
         return
+
+    results = sorted(results, key=lambda x: datetime.fromisoformat(x['createdAt'].rstrip('Z')), reverse=True)
 
     civitai.log(f'Found {len(results)} hash matches')
 
@@ -101,6 +104,8 @@ def load_info():
         civitai.log('No info found on Civitai')
         return
 
+    results = sorted(results, key=lambda x: datetime.fromisoformat(x['createdAt'].rstrip('Z')), reverse=True)
+
     civitai.log(f'Found {len(results)} hash matches')
 
     cc = opencc_utils.converter()
@@ -118,7 +123,7 @@ def load_info():
             if file_hash.lower() not in hashes:
                 continue
 
-            sd_version = base_model_version.get(r['baseModel'], 'unknown')
+            sd_version = base_model_version.get(r['baseModel'])
 
             trained_words = [strip for s in r['trainedWords'] if (strip := s.strip()).strip(',')]
 
@@ -130,12 +135,13 @@ def load_info():
 
             data = {
                 'description': cc.convert(r.get('model', {}).get('name', '')),
-                'sd version': sd_version,
                 'activation text': ', '.join(trained_words),
                 # 'preferred weight': 0.8,
                 'notes': notes,
                 'civitai_metadata': r
             }
+            if sd_version:
+                data['sd version'] = sd_version
 
             if not (matches := [resource for resource in missing_info if file_hash.lower() == resource['hash']]):
                 continue
