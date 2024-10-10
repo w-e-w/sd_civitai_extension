@@ -198,6 +198,7 @@ def get_all_missing_previews():
 
 
 def re_download_preview_from_cache():
+    gr.Info('Scanning for missing preview images')
     if missing_images_url_dest := set(get_all_missing_previews()):
         for url, dest in tqdm(missing_images_url_dest):
             # civitai.download_image(url, dest)
