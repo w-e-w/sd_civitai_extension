@@ -188,7 +188,7 @@ def get_all_missing_previews():
                 url_ext = os.path.splitext(image['url'])[1].lower()
                 dest = model_path.with_stem(f'{model_path.stem}.preview.{i}').with_suffix(url_ext)
                 if not dest.exists():
-                    for ext in civitai.image_extensions:
+                    for ext in civitai.preview_extensions:
                         if url_ext == ext:
                             continue
                         if model_path.with_stem(f'{model_path.stem}.preview.{i}').with_suffix(ext).exists():

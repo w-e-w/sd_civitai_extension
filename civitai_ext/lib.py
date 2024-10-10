@@ -19,7 +19,10 @@ from modules.paths import models_path
 base_url = shared.cmd_opts.civitai_endpoint
 user_agent = 'CivitaiLink:Automatic1111'
 download_chunk_size = 8192
-image_extensions = {'.jpeg', '.png', '.jpg', '.gif', '.webp', '.avif', '.mp4', '.webm'}
+
+
+image_extensions = ['.jpeg', '.png', '.jpg', '.gif', '.webp', '.avif', '.mp4', '.webm']
+preview_extensions = image_extensions + ['.mp4', '.webm']
 
 
 # endregion
@@ -385,6 +388,5 @@ def download_image_auto_file_type(url, dest, on_progress=None):
 
 def update_resource_preview(file_hash: str, preview_url: str):
     file_hash = file_hash.lower()
-
     for resource in [resource for resource in load_resource_list([]) if file_hash == resource['hash']]:
         download_image_auto_file_type(preview_url, f'{os.path.splitext(resource["path"])[0]}.preview{os.path.splitext(preview_url)[1]}')
