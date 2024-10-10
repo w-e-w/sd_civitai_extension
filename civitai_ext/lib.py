@@ -372,12 +372,13 @@ def download_image_auto_file_type(url, dest, on_progress=None):
                 dest = dest.with_suffix(real_img_type)
 
             if dest.exists():
-                override_choice = input(f"File already exists: {dest}. overwrite Y/N? ").strip().lower()
+                override_choice = input(f"\nFile already exists: {str(dest)}overwrite Y/N?\n").strip().lower()
                 if override_choice.strip() != 'y':
                     return
-
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_bytes(file_like_object.getvalue())
+            if dest.suffix not in image_extensions:
+                input(f'\nWarning: Not unexpected file type {str(dest)}\nPress Enter to continue')
         except Exception as e:
             print(e)
 
