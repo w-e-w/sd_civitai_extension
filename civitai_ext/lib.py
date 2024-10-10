@@ -21,7 +21,7 @@ user_agent = 'CivitaiLink:Automatic1111'
 download_chunk_size = 8192
 
 
-image_extensions = ['.jpeg', '.png', '.jpg', '.gif', '.webp', '.avif', '.mp4', '.webm']
+image_extensions = ['.jpeg', '.png', '.jpg', '.gif', '.webp', '.avif']
 preview_extensions = image_extensions + ['.mp4', '.webm']
 
 

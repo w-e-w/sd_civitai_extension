@@ -1,3 +1,5 @@
+import re
+import shutil
 from concurrent.futures import ThreadPoolExecutor
 from . import lib as civitai, opencc_utils
 from datetime import datetime
@@ -11,64 +13,64 @@ import os
 previewable_types = ['LORA', 'LoCon', 'Hypernetwork', 'TextualInversion', 'Checkpoint']
 
 
-def load_previews():
-    nsfw_previews = shared.opts.civitai_nsfw_previews
+# def load_previews():
+#     nsfw_previews = shared.opts.civitai_nsfw_previews
+#
+#     civitai.log(f'Check resources for missing preview images')
+#     resources = civitai.load_resource_list()
+#     resources = [r for r in resources if r['type'] in previewable_types]
+#
+#     # get all resources that are missing previews
+#     missing_previews = [r for r in resources if r['hasPreview'] is False]
+#     civitai.log(f'Found {len(missing_previews)} resources missing preview images')
+#     hashes = [r['hash'] for r in missing_previews]
+#
+#     # split hashes into batches of 100 and fetch into results
+#     results = []
+#     try:
+#         for i in range(0, len(hashes), 100):
+#             batch = hashes[i:i + 100]
+#             results.extend(civitai.get_all_by_hash(batch))
+#     except Exception:
+#         errors.report('Failed to fetch preview images from Civitai', exc_info=True)
+#         return
+#
+#     if not results:
+#         civitai.log('No preview images found on Civitai')
+#         return
+#
+#     results = sorted(results, key=lambda x: datetime.fromisoformat(x['createdAt'].rstrip('Z')), reverse=True)
+#
+#     civitai.log(f'Found {len(results)} hash matches')
+#
+#     # update the resources with the new preview
+#     updated = 0
+#     for r in tqdm(results):
+#         if r is None:
+#             continue
+#
+#         for file in r['files']:
+#             if 'hashes' not in file or 'SHA256' not in file['hashes']:
+#                 continue
+#             file_hash = file['hashes']['SHA256']
+#             if file_hash.lower() not in hashes:
+#                 continue
+#             images = r['images']
+#             if not nsfw_previews:
+#                 images = [i for i in images if i['nsfw'] is False]
+#             if not images:
+#                 continue
+#             image_url = images[0]['url']
+#             civitai.update_resource_preview(file_hash, image_url)
+#             updated += 1
+#
+#     civitai.log(f'Updated {updated} preview images')
 
-    civitai.log(f'Check resources for missing preview images')
-    resources = civitai.load_resource_list()
-    resources = [r for r in resources if r['type'] in previewable_types]
 
-    # get all resources that are missing previews
-    missing_previews = [r for r in resources if r['hasPreview'] is False]
-    civitai.log(f'Found {len(missing_previews)} resources missing preview images')
-    hashes = [r['hash'] for r in missing_previews]
-
-    # split hashes into batches of 100 and fetch into results
-    results = []
-    try:
-        for i in range(0, len(hashes), 100):
-            batch = hashes[i:i + 100]
-            results.extend(civitai.get_all_by_hash(batch))
-    except Exception:
-        errors.report('Failed to fetch preview images from Civitai', exc_info=True)
-        return
-
-    if not results:
-        civitai.log('No preview images found on Civitai')
-        return
-
-    results = sorted(results, key=lambda x: datetime.fromisoformat(x['createdAt'].rstrip('Z')), reverse=True)
-
-    civitai.log(f'Found {len(results)} hash matches')
-
-    # update the resources with the new preview
-    updated = 0
-    for r in tqdm(results):
-        if r is None:
-            continue
-
-        for file in r['files']:
-            if 'hashes' not in file or 'SHA256' not in file['hashes']:
-                continue
-            file_hash = file['hashes']['SHA256']
-            if file_hash.lower() not in hashes:
-                continue
-            images = r['images']
-            if not nsfw_previews:
-                images = [i for i in images if i['nsfw'] is False]
-            if not images:
-                continue
-            image_url = images[0]['url']
-            civitai.update_resource_preview(file_hash, image_url)
-            updated += 1
-
-    civitai.log(f'Updated {updated} preview images')
-
-
-def run_load_previews():
-    with ThreadPoolExecutor() as executor:
-        executor.submit(load_previews)
-    gr.Info('Finished fetching preview images from Civitai')
+# def run_load_previews():
+#     with ThreadPoolExecutor() as executor:
+#         executor.submit(load_previews)
+#     gr.Info('Finished fetching preview images from Civitai')
 
 
 actionable_types = ['LORA', 'LoCon', 'Hypernetwork', 'TextualInversion', 'Checkpoint']
@@ -162,17 +164,15 @@ def load_info():
     civitai.log(f'Updated {updated} info files')
 
 
-def run_get_load_info():
-    with ThreadPoolExecutor() as executor:
-        executor.submit(load_info)
-    gr.Info('Finished fetching info from Civitai')
+# def run_get_load_info():
+#     with ThreadPoolExecutor() as executor:
+#         executor.submit(load_info)
+#     gr.Info('Finished fetching info from Civitai')
 
 
 def run_get_info():
-    with ThreadPoolExecutor() as executor:
-        executor.submit(load_info)
-        executor.submit(load_previews)
-    gr.Info('Finished fetching info and preview images from Civitai')
+    load_info()
+    load_previews_v2()
 
 
 def get_all_missing_previews():
@@ -206,3 +206,32 @@ def re_download_preview_from_cache():
         gr.Info('Finished fetching preview images from Civitai')
     else:
         gr.Info('No missing preview images found')
+
+
+def load_previews_v2():
+    re_download_preview_from_cache()
+
+    # nsfw_previews = shared.opts.civitai_nsfw_previews
+    gr.Info('Updating preview images from preview images')
+
+    resources = civitai.load_resource_list()
+    resources = [r for r in resources if r['type'] in previewable_types]
+
+    # get all resources that are missing previews
+    missing_previews = [r for r in resources if r['hasPreview'] is False]
+
+    civitai.log(f'Found {len(missing_previews)} resources missing preview images')
+
+    paths = [Path(r['path']) for r in missing_previews]
+    for path in paths:
+        matching_files = [file for file in path.parent.glob(f'{path.stem}.*')]
+        file_pattern = re.compile(f'^{path.stem}.preview.[0-9]+.[^.]+$')
+        matching_files = list(filter(lambda x: x.suffix.lower() in civitai.image_extensions and file_pattern.match(x.name), matching_files))
+        if matching_files:
+            matching_files = sorted(matching_files, key=lambda x: int(x.stem.split('.')[-1]))
+            img = matching_files[0]
+            preview_path = img.with_stem(img.stem.rpartition(".")[0])
+            if not preview_path.exists():
+                shutil.copy(img, preview_path)
+
+    gr.Info('Finished updating preview images from preview images')
