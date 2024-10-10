@@ -1,6 +1,5 @@
 import io
 from pathlib import Path
-from PIL import Image
 import json
 import os
 import shutil
@@ -8,6 +7,7 @@ import tempfile
 import time
 from typing import List
 from datetime import datetime
+import filetype
 import requests
 import glob
 import re
@@ -327,10 +327,8 @@ def get_request_stream(url):
 
 def test_image_type(image_path):
     try:
-        with Image.open(image_path) as img:
-            return f'.{img.format.lower()}'
+        return f'.{filetype.guess(image_path).extension}'
     except Exception as e:
-        print(e)
         pass
 
 
