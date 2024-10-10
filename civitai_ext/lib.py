@@ -1,20 +1,23 @@
+from pathlib import Path
 import json
 import os
 import shutil
 import tempfile
 import time
 from typing import List
+from datetime import datetime
 import requests
 import glob
 import re
 
 from tqdm import tqdm
-from modules import shared, sd_models, sd_vae, hashes, ui_extra_networks
+from modules import shared, sd_models, sd_vae, hashes, ui_extra_networks, errors
 from modules.paths import models_path
 
 base_url = shared.cmd_opts.civitai_endpoint
 user_agent = 'CivitaiLink:Automatic1111'
 download_chunk_size = 8192
+image_extensions = {'.jpeg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif'}
 
 
 # endregion
@@ -105,6 +108,34 @@ def get_models(query, creator, tag, file_type, page=1, page_size=20, sort='Most 
 def get_all_by_hash(file_hashes: List[str]):
     response = req(f"/model-versions/by-hash", method='POST', data=file_hashes)
     return response
+
+
+metadata_cache_dict = {}
+
+
+def get_all_by_hash_with_cache(file_hashes: List[str]):
+    """"Un-finished function"""
+    global metadata_cache_dict
+    cached_info_hashes = [file_hash for file_hash in file_hashes if file_hash in metadata_cache_dict]
+    missing_info_hashes = [file_hash for file_hash in file_hashes if file_hash not in metadata_cache_dict]
+    new_results = []
+    try:
+        for i in range(0, len(missing_info_hashes), 100):
+            batch = missing_info_hashes[i:i + 100]
+            new_results.extend(get_all_by_hash(batch))
+
+    except Exception:
+        errors.report('Failed to fetch info from Civitai', exc_info=True)
+
+    new_results = sorted(new_results, key=lambda x: datetime.fromisoformat(x['createdAt'].rstrip('Z')), reverse=True)
+
+    for new_metadata in new_results:
+        file_hash = new_metadata['hashes']['SHA256'].lower()
+        metadata_cache_dict[file_hash] = new_metadata
+
+    # metadata_cache_dict[file_hash] = get_model_version_by_hash(file_hash)
+    results = {}
+    return results
 
 
 def get_model_version(_id):
@@ -264,10 +295,96 @@ def get_model_by_hash(file_hash: str):
         return found[0]
 
 
+modified_url_re = re.compile(r'/width=\d+/')
+re_uuid_v4 = re.compile(r'([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/).*')
+
+
+IMG_CONTENT_TYPE_MAP = {
+    'image/jpeg': '.jpg',
+    'image/x-icon': '.ico',
+}
+
+
+def get_request_stream(url):
+    response = None
+    while True:
+        for i in range(3):
+            response = requests.get(url, stream=True, headers={"User-Agent": user_agent})
+            if response.status_code == 200:
+                return response
+            time.sleep(1)
+
+        if response.status_code != 200:
+            user_input = input('Press Enter to retry, Enter "s" to skip').strip()
+            if user_input.strip().lower() == 's':
+                return response
+            elif user_input:
+                url = user_input
+                print(f"Retrying with new URL: {url}")
+
+
+def download_image_auto_file_type(url, dest, on_progress=None):
+    dest = Path(dest)
+
+    original_true_url = re_uuid_v4.sub(r'\1original=true', url)
+    log(f'Downloading: "{original_true_url}" to {dest.with_suffix("")}\n')
+
+    response = get_request_stream(original_true_url)
+
+    if response.status_code != 200:
+        log(f'Failed to download {original_true_url}')
+        return
+    #     time.sleep(1)
+    #
+    #     input(f"Failed to download from {original_true_url}. Press Enter to try backup URL: {url}")
+    #     response = get_request_stream(url)
+        # response = requests.get(url, stream=True, headers={"User-Agent": user_agent})
+
+    content_type = response.headers.get('Content-Type', '')
+    file_extension = IMG_CONTENT_TYPE_MAP.get(content_type, f'.{content_type.rpartition("/")[2]}')
+    if file_extension not in image_extensions:
+        user_input = input(f'\nWarning: Unknown Content-Type "{content_type}" for {url}\nEnter file extension or press Enter to continue:\n').strip()
+        if user_input:
+            if not user_input.startswith('.'):
+                user_input = '.' + user_input
+            file_extension = user_input
+
+    dest = dest.with_suffix(file_extension)
+
+    if dest.exists():
+        log(f'File already exists: {dest}')
+
+    total = int(response.headers.get('content-length', 0))
+    start_time = time.time()
+
+    dest = os.path.expanduser(dest)
+    dst_dir = os.path.dirname(dest)
+    f = tempfile.NamedTemporaryFile(delete=False, dir=dst_dir)
+
+    try:
+        current = 0
+        with tqdm(total=total, unit='B', unit_scale=True, unit_divisor=1024) as bar:
+            for data in response.iter_content(chunk_size=download_chunk_size):
+                current += len(data)
+                pos = f.write(data)
+                bar.update(pos)
+                if on_progress is not None:
+                    should_stop = on_progress(current, total, start_time)
+                    if should_stop:
+                        raise Exception('Download cancelled')
+        f.close()
+        shutil.move(f.name, dest)
+    except OSError as e:
+        print(f"Could not write the preview file to {dst_dir}")
+        print(e)
+    finally:
+        f.close()
+        if os.path.exists(f.name):
+            os.remove(f.name)
+
+
 def update_resource_preview(file_hash: str, preview_url: str):
     file_hash = file_hash.lower()
-    modified_url = re.sub(r'/width=\d+/', '/', preview_url)
 
     for resource in [resource for resource in load_resource_list([]) if file_hash == resource['hash']]:
-        # download image and save to resource['path'] - ext + '.preview.png'
-        download_file(modified_url, f'{os.path.splitext(resource["path"])[0]}.preview{os.path.splitext(preview_url)[1]}', backup_url=preview_url)
+        download_image_auto_file_type(preview_url, f'{os.path.splitext(resource["path"])[0]}.preview{os.path.splitext(preview_url)[1]}')

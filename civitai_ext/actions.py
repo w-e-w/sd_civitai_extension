@@ -6,6 +6,7 @@ import json
 from modules import shared, errors
 from tqdm import tqdm
 import gradio as gr
+import os
 
 previewable_types = ['LORA', 'LoCon', 'Hypernetwork', 'TextualInversion', 'Checkpoint']
 
@@ -75,6 +76,7 @@ base_model_version = {
     'SD 1': 'SD1',
     'SD 2': 'SD2',
     'SDXL': 'SDXL',
+    # 'Pony': 'SDXL',
     'SD 3': 'SD3',
 }
 
@@ -125,13 +127,19 @@ def load_info():
 
             sd_version = base_model_version.get(r['baseModel'])
 
-            trained_words = [strip for s in r['trainedWords'] if (strip := s.strip()).strip(',')]
+            trained_words = [strip for s in r['trainedWords'] if (strip := s.strip().strip(','))]
 
             notes = ''
             if (model_id := r.get('modelId')) and (sub_id := r.get('id')):
                 notes += f'https://civitai.com/models/{model_id}?modelVersionId={sub_id}\n'
             if trained_words:
                 notes += '\n'.join(trained_words) + '\n'
+
+            about_this_version = r.get('description')
+            if about_this_version is not None:
+                if version_description := about_this_version.strip():
+                    notes += f'\nAbout this version:\n'
+                    notes += version_description + '\n'
 
             data = {
                 'description': cc.convert(r.get('model', {}).get('name', '')),
@@ -165,3 +173,35 @@ def run_get_info():
         executor.submit(load_info)
         executor.submit(load_previews)
     gr.Info('Finished fetching info and preview images from Civitai')
+
+
+def get_all_missing_previews():
+    for resource in civitai.load_resource_list():
+        if resource['hasInfo']:
+            model_path = Path(resource['path'])
+            model_info_path = model_path.with_suffix('.json')
+            model_info = json.loads(model_info_path.read_text())
+            civitai_metadata = model_info.get('civitai_metadata')
+            if not civitai_metadata:
+                continue
+            for i, image in enumerate(civitai_metadata.get('images', [])):
+                url_ext = os.path.splitext(image['url'])[1].lower()
+                dest = model_path.with_stem(f'{model_path.stem}.preview.{i}').with_suffix(url_ext)
+                if not dest.exists():
+                    for ext in civitai.image_extensions:
+                        if url_ext == ext:
+                            continue
+                        if model_path.with_stem(f'{model_path.stem}.preview.{i}').with_suffix(ext).exists():
+                            break
+                    else:
+                        yield image['url'], dest
+
+
+def re_download_preview_from_cache():
+    if missing_images_url_dest := set(get_all_missing_previews()):
+        for url, dest in tqdm(missing_images_url_dest):
+            # civitai.download_image(url, dest)
+            civitai.download_image_auto_file_type(url, dest)
+        gr.Info('Finished fetching preview images from Civitai')
+    else:
+        gr.Info('No missing preview images found')
