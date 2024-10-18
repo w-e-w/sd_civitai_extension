@@ -1,11 +1,10 @@
 import re
 import shutil
-from concurrent.futures import ThreadPoolExecutor
 from . import lib as civitai, opencc_utils
 from datetime import datetime
 from pathlib import Path
 import json
-from modules import shared, errors
+from modules import errors
 from tqdm import tqdm
 import gradio as gr
 import os
@@ -201,7 +200,6 @@ def re_download_preview_from_cache():
     gr.Info('Scanning for missing preview images')
     if missing_images_url_dest := set(get_all_missing_previews()):
         for url, dest in tqdm(missing_images_url_dest):
-            # civitai.download_image(url, dest)
             civitai.download_image_auto_file_type(url, dest)
         gr.Info('Finished fetching preview images from Civitai')
     else:
