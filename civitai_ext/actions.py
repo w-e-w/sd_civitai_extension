@@ -1,12 +1,12 @@
-import re
-import shutil
 from . import lib as civitai, opencc_utils
 from datetime import datetime
-from pathlib import Path
-import json
 from modules import errors
+from pathlib import Path
 from tqdm import tqdm
 import gradio as gr
+import shutil
+import json
+import re
 import os
 
 previewable_types = ['LORA', 'LoCon', 'Hypernetwork', 'TextualInversion', 'Checkpoint']
@@ -223,7 +223,7 @@ def load_previews_v2():
     paths = [Path(r['path']) for r in missing_previews]
     for path in paths:
         matching_files = [file for file in path.parent.glob(f'{path.stem}.*')]
-        file_pattern = re.compile(f'^{path.stem}.preview.[0-9]+.[^.]+$')
+        file_pattern = re.compile(f'^{re.escape(path.stem)}\\.preview\\.[0-9]+\\.[^.]+$')
         matching_files = list(filter(lambda x: x.suffix.lower() in civitai.image_extensions and file_pattern.match(x.name), matching_files))
         if matching_files:
             matching_files = sorted(matching_files, key=lambda x: int(x.stem.split('.')[-1]))
