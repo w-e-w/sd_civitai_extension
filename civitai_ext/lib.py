@@ -1,18 +1,18 @@
-import io
-from pathlib import Path
-import json
-import os
-import shutil
-import tempfile
-import time
-from typing import List
 from datetime import datetime
+from pathlib import Path
+from typing import List
+from tqdm import tqdm
+# import tempfile
 import filetype
 import requests
+# import shutil
+import json
+import time
 import glob
+import io
+import os
 import re
 
-from tqdm import tqdm
 from modules import shared, sd_models, sd_vae, hashes, ui_extra_networks, errors
 from modules.paths import models_path
 
@@ -265,13 +265,15 @@ def load_resource_list(types=None):
     global resources
     if types is None:
         types = ['LORA', 'LoCon', 'Hypernetwork', 'TextualInversion', 'Checkpoint', 'VAE', 'Controlnet', 'Upscaler']
-
+    lora_dir = get_lora_dir()
     if 'LORA' in types:
         resources = [r for r in resources if r['type'] != 'LORA']
-        resources += get_resources_in_folder('LORA', get_lora_dir(), ['pt', 'safetensors', 'ckpt'])
+        resources += get_resources_in_folder('LORA', lora_dir, ['pt', 'safetensors', 'ckpt'])
     if 'LoCon' in types:
-        resources = [r for r in resources if r['type'] != 'LoCon']
-        resources += get_resources_in_folder('LoCon', get_locon_dir(), ['pt', 'safetensors', 'ckpt'])
+        lycoris_dir = get_locon_dir()
+        if lora_dir != lycoris_dir:
+            resources = [r for r in resources if r['type'] != 'LoCon']
+            resources += get_resources_in_folder('LoCon', get_locon_dir(), ['pt', 'safetensors', 'ckpt'])
     if 'Hypernetwork' in types:
         resources = [r for r in resources if r['type'] != 'Hypernetwork']
         resources += get_resources_in_folder('Hypernetwork', shared.cmd_opts.hypernetwork_dir, ['pt', 'safetensors', 'ckpt'])
