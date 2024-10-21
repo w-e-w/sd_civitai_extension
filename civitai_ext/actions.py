@@ -1,8 +1,9 @@
 from . import lib as civitai, opencc_utils
 from datetime import datetime
-from modules import errors
+from modules import errors, images
 from pathlib import Path
 from tqdm import tqdm
+from PIL import Image
 import gradio as gr
 import shutil
 import json
@@ -206,6 +207,18 @@ def re_download_preview_from_cache():
         gr.Info('No missing preview images found')
 
 
+def select_preview(image_list):
+    for img_path in image_list:
+        try:
+            geninfo, items = images.read_info_from_image(Image.open(img_path))
+            if geninfo:
+                return img_path
+        except Exception:
+            errors.report(f'Error reading image {img_path}', exc_info=True)
+
+    return image_list[0]
+
+
 def load_previews_v2():
     re_download_preview_from_cache()
 
@@ -227,7 +240,7 @@ def load_previews_v2():
         matching_files = list(filter(lambda x: x.suffix.lower() in civitai.image_extensions and file_pattern.match(x.name), matching_files))
         if matching_files:
             matching_files = sorted(matching_files, key=lambda x: int(x.stem.split('.')[-1]))
-            img = matching_files[0]
+            img = select_preview(matching_files)
             preview_path = img.with_stem(img.stem.rpartition(".")[0])
             if not preview_path.exists():
                 shutil.copy(img, preview_path)

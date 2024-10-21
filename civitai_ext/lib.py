@@ -2,10 +2,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import List
 from tqdm import tqdm
-# import tempfile
+import gradio as gr
 import filetype
 import requests
-# import shutil
 import json
 import time
 import glob
@@ -382,8 +381,10 @@ def download_image_auto_file_type(url, dest, on_progress=None):
                     return
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_bytes(file_like_object.getvalue())
-            if dest.suffix not in image_extensions:
-                input(f'\nWarning: Not unexpected file type {str(dest)}\nPress Enter to continue')
+            if dest.suffix not in preview_extensions:
+                message = f'Warning: Not unexpected file type {str(dest)}\nPress Enter to continue'
+                gr.Warning(message)
+                input(f'\n{message}\nPress Enter to continue')
         except Exception as e:
             print(e)
 
