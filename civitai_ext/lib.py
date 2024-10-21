@@ -33,44 +33,44 @@ def log(message):
     print(f'Civitai: {message}')
 
 
-def download_file(url, dest, on_progress=None, *, backup_url=None):
-    if os.path.exists(dest):
-        log(f'File already exists: {dest}')
-
-    log(f'Downloading: "{url}" to {dest}\n')
-
-    response = requests.get(url, stream=True, headers={"User-Agent": user_agent})
-    if backup_url is not None and response.status_code != 200:
-        input(f"Failed to download from {url}. Press Enter to try backup URL: {backup_url}")
-        response = requests.get(backup_url, stream=True, headers={"User-Agent": user_agent})
-
-    total = int(response.headers.get('content-length', 0))
-    start_time = time.time()
-
-    dest = os.path.expanduser(dest)
-    dst_dir = os.path.dirname(dest)
-    f = tempfile.NamedTemporaryFile(delete=False, dir=dst_dir)
-
-    try:
-        current = 0
-        with tqdm(total=total, unit='B', unit_scale=True, unit_divisor=1024) as bar:
-            for data in response.iter_content(chunk_size=download_chunk_size):
-                current += len(data)
-                pos = f.write(data)
-                bar.update(pos)
-                if on_progress is not None:
-                    should_stop = on_progress(current, total, start_time)
-                    if should_stop:
-                        raise Exception('Download cancelled')
-        f.close()
-        shutil.move(f.name, dest)
-    except OSError as e:
-        print(f"Could not write the preview file to {dst_dir}")
-        print(e)
-    finally:
-        f.close()
-        if os.path.exists(f.name):
-            os.remove(f.name)
+# def download_file(url, dest, on_progress=None, *, backup_url=None):
+#     if os.path.exists(dest):
+#         log(f'File already exists: {dest}')
+#
+#     log(f'Downloading: "{url}" to {dest}\n')
+#
+#     response = requests.get(url, stream=True, headers={"User-Agent": user_agent})
+#     if backup_url is not None and response.status_code != 200:
+#         input(f"Failed to download from {url}. Press Enter to try backup URL: {backup_url}")
+#         response = requests.get(backup_url, stream=True, headers={"User-Agent": user_agent})
+#
+#     total = int(response.headers.get('content-length', 0))
+#     start_time = time.time()
+#
+#     dest = os.path.expanduser(dest)
+#     dst_dir = os.path.dirname(dest)
+#     f = tempfile.NamedTemporaryFile(delete=False, dir=dst_dir)
+#
+#     try:
+#         current = 0
+#         with tqdm(total=total, unit='B', unit_scale=True, unit_divisor=1024) as bar:
+#             for data in response.iter_content(chunk_size=download_chunk_size):
+#                 current += len(data)
+#                 pos = f.write(data)
+#                 bar.update(pos)
+#                 if on_progress is not None:
+#                     should_stop = on_progress(current, total, start_time)
+#                     if should_stop:
+#                         raise Exception('Download cancelled')
+#         f.close()
+#         shutil.move(f.name, dest)
+#     except OSError as e:
+#         print(f"Could not write the preview file to {dst_dir}")
+#         print(e)
+#     finally:
+#         f.close()
+#         if os.path.exists(f.name):
+#             os.remove(f.name)
 
 
 # region API
@@ -121,7 +121,7 @@ metadata_cache_dict = {}
 def get_all_by_hash_with_cache(file_hashes: List[str]):
     """"Un-finished function"""
     global metadata_cache_dict
-    cached_info_hashes = [file_hash for file_hash in file_hashes if file_hash in metadata_cache_dict]
+    # cached_info_hashes = [file_hash for file_hash in file_hashes if file_hash in metadata_cache_dict]
     missing_info_hashes = [file_hash for file_hash in file_hashes if file_hash not in metadata_cache_dict]
     new_results = []
     try:
