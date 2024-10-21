@@ -6,6 +6,7 @@ from tqdm import tqdm
 from PIL import Image
 import gradio as gr
 import shutil
+import glob
 import json
 import re
 import os
@@ -235,7 +236,7 @@ def load_previews_v2():
 
     paths = [Path(r['path']) for r in missing_previews]
     for path in paths:
-        matching_files = [file for file in path.parent.glob(f'{path.stem}.*')]
+        matching_files = [file for file in path.parent.glob(f'{glob.escape(path.stem)}.*')]
         file_pattern = re.compile(f'^{re.escape(path.stem)}\\.preview\\.[0-9]+\\.[^.]+$')
         matching_files = list(filter(lambda x: x.suffix.lower() in civitai.image_extensions and file_pattern.match(x.name), matching_files))
         if matching_files:
