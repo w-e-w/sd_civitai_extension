@@ -340,7 +340,8 @@ def download_image_auto_file_type(url, dest, on_progress=None):
     dest = Path(dest)
 
     original_true_url = re_uuid_v4.sub(r'\1original=true', url)
-    log(f'Downloading: "{original_true_url}" to {dest.with_suffix("")}\n')
+    print()
+    log(f'Downloading: "{original_true_url}" to {dest.with_suffix("")}')
 
     response = get_request_stream(original_true_url)
 
@@ -358,7 +359,7 @@ def download_image_auto_file_type(url, dest, on_progress=None):
     with io.BytesIO() as file_like_object:
         try:
             current = 0
-            with tqdm(total=total, unit='B', unit_scale=True, unit_divisor=1024) as bar:
+            with tqdm(total=total, unit='B', unit_scale=True, unit_divisor=1024, delay=2) as bar:
                 for data in response.iter_content(chunk_size=download_chunk_size):
                     current += len(data)
                     file_like_object.write(data)
