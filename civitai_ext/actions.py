@@ -84,8 +84,9 @@ def load_info():
                     notes += f'\nAbout this version:\n'
                     notes += version_description + '\n'
 
+            description = f"{r.get('model', {}).get('name', '')}\n{r.get('name', '')}"
             data = {
-                'description': cc.convert(r.get('model', {}).get('name', '')),
+                'description': cc.convert(description),
                 'activation text': ', '.join(trained_words),
                 # 'preferred weight': 0.8,
                 'notes': notes,
