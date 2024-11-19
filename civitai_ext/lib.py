@@ -295,7 +295,7 @@ def test_image_type(image_path):
         pass
 
 
-def download_image_auto_file_type(url, dest, total_pbar: tqdm=None):
+def download_image_auto_file_type(url, dest, total_pbar: tqdm = None):
     dest = Path(dest)
 
     original_true_url = re_uuid_v4.sub(r'\1original=true', url)
@@ -303,10 +303,10 @@ def download_image_auto_file_type(url, dest, total_pbar: tqdm=None):
     if total_pbar is not None:
         total_pbar.set_postfix_str(f'{original_true_url} -> {dest.with_suffix("")}')
     response = get_request_stream(original_true_url)
-
+    # print('\n\ntest error')
     if response.status_code != 200:
-        print()
-        log(f'Failed to download {original_true_url}')
+        print('\n')
+        log(f'Failed to download {original_true_url} {response.status_code}')
         return
 
     content_type = response.headers.get('Content-Type', '')
@@ -323,7 +323,8 @@ def download_image_auto_file_type(url, dest, total_pbar: tqdm=None):
                     bar.update(len(data))  # Update with the length of the data written
 
         except Exception as e:
-            print(f'\nFailed to download image {e}')
+            print('\n')
+            log(f'Failed to download {original_true_url} {e}')
 
         try:
             real_img_type = test_image_type(file_like_object)
@@ -341,4 +342,5 @@ def download_image_auto_file_type(url, dest, total_pbar: tqdm=None):
                 gr.Warning(message)
                 input(f'\n{message}\nPress Enter to continue')
         except Exception as e:
-            print(f'\n{e}')
+            print(f'\n')
+            log(f'Failed to download {original_true_url} {e}')
