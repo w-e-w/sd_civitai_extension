@@ -295,26 +295,24 @@ def test_image_type(image_path):
         pass
 
 
-def download_image_auto_file_type(url, dest, on_progress=None):
+def download_image_auto_file_type(url, dest, total_pbar: tqdm=None):
     dest = Path(dest)
 
     original_true_url = re_uuid_v4.sub(r'\1original=true', url)
-    print()
-    log(f'Downloading: "{original_true_url}" to {dest.with_suffix("")}')
-
+    # log(f'Downloading: "{original_true_url}" to {dest.with_suffix("")}')
+    if total_pbar is not None:
+        total_pbar.set_postfix_str(f'{original_true_url} -> {dest.with_suffix("")}')
     response = get_request_stream(original_true_url)
 
     if response.status_code != 200:
+        print()
         log(f'Failed to download {original_true_url}')
         return
 
     content_type = response.headers.get('Content-Type', '')
     file_extension = IMG_CONTENT_TYPE_MAP.get(content_type, f'.{content_type.rpartition("/")[2]}')
     dest = dest.with_suffix(file_extension)
-
     total = int(response.headers.get('content-length', 0))
-    start_time = time.time()
-
     with io.BytesIO() as file_like_object:
         try:
             current = 0
@@ -323,12 +321,9 @@ def download_image_auto_file_type(url, dest, on_progress=None):
                     current += len(data)
                     file_like_object.write(data)
                     bar.update(len(data))  # Update with the length of the data written
-                    if on_progress is not None:
-                        should_stop = on_progress(current, total, start_time)
-                        if should_stop:
-                            raise Exception('Download cancelled')
+
         except Exception as e:
-            print(f'Failed to download image {e}')
+            print(f'\nFailed to download image {e}')
 
         try:
             real_img_type = test_image_type(file_like_object)
@@ -346,7 +341,7 @@ def download_image_auto_file_type(url, dest, on_progress=None):
                 gr.Warning(message)
                 input(f'\n{message}\nPress Enter to continue')
         except Exception as e:
-            print(e)
+            print(f'\n{e}')
 
 
 def update_resource_preview(file_hash: str, preview_url: str):

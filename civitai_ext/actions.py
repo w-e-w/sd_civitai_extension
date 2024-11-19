@@ -76,10 +76,12 @@ previewable_types = ['LORA', 'LoCon', 'Hypernetwork', 'TextualInversion', 'Check
 
 actionable_types = ['LORA', 'LoCon', 'Hypernetwork', 'TextualInversion', 'Checkpoint']
 base_model_version = {
-    'SD 1': 'SD1',
-    'SD 2': 'SD2',
-    'SDXL': 'SDXL',
+    # 'SD 1': 'SD1',
+    # 'SD 1.5': 'SD1',
+    # 'SD 2': 'SD2',
+    # 'SDXL': 'SDXL',
     # 'Pony': 'SDXL',
+    # 'Illustrious': 'SDXL',
     'SD 3': 'SD3',
 }
 
