@@ -342,9 +342,3 @@ def download_image_auto_file_type(url, dest, total_pbar: tqdm=None):
                 input(f'\n{message}\nPress Enter to continue')
         except Exception as e:
             print(f'\n{e}')
-
-
-def update_resource_preview(file_hash: str, preview_url: str):
-    file_hash = file_hash.lower()
-    for resource in [resource for resource in load_resource_list([]) if file_hash == resource['hash']]:
-        download_image_auto_file_type(preview_url, f'{os.path.splitext(resource["path"])[0]}.preview{os.path.splitext(preview_url)[1]}')
