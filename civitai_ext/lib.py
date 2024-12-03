@@ -12,7 +12,7 @@ import io
 import os
 import re
 
-from modules import shared, sd_models, sd_vae, hashes, ui_extra_networks, errors
+from modules import shared, sd_models, sd_vae, hashes, ui_extra_networks, errors, cache
 from modules.paths import models_path
 
 base_url = shared.cmd_opts.civitai_endpoint
@@ -22,6 +22,7 @@ download_chunk_size = 8192
 
 image_extensions = ['.jpeg', '.png', '.jpg', '.gif', '.webp', '.avif']
 preview_extensions = image_extensions + ['.mp4', '.webm']
+civil_ai_api_cache = cache.cache('civil_ai_api_sha256')
 
 
 # endregion
@@ -73,32 +74,32 @@ def get_all_by_hash(file_hashes: List[str]):
     return response
 
 
-metadata_cache_dict = {}
-
-
 def get_all_by_hash_with_cache(file_hashes: List[str]):
     """"Un-finished function"""
-    global metadata_cache_dict
+
     # cached_info_hashes = [file_hash for file_hash in file_hashes if file_hash in metadata_cache_dict]
-    missing_info_hashes = [file_hash for file_hash in file_hashes if file_hash not in metadata_cache_dict]
+    missing_info_hashes = [file_hash for file_hash in file_hashes if file_hash not in civil_ai_api_cache]
     new_results = []
     try:
         for i in range(0, len(missing_info_hashes), 100):
             batch = missing_info_hashes[i:i + 100]
             new_results.extend(get_all_by_hash(batch))
 
-    except Exception:
+    except Exception as e:
         errors.report('Failed to fetch info from Civitai', exc_info=True)
+        raise e
 
     new_results = sorted(new_results, key=lambda x: datetime.fromisoformat(x['createdAt'].rstrip('Z')), reverse=True)
 
+    found_info_hashes = set()
     for new_metadata in new_results:
-        file_hash = new_metadata['hashes']['SHA256'].lower()
-        metadata_cache_dict[file_hash] = new_metadata
-
-    # metadata_cache_dict[file_hash] = get_model_version_by_hash(file_hash)
-    results = {}
-    return results
+        for file in new_metadata['files']:
+            file_hash = file['hashes']['SHA256'].lower()
+            found_info_hashes.add(file_hash)
+    for file_hash in set(missing_info_hashes) - found_info_hashes:
+        if file_hash not in civil_ai_api_cache:
+            civil_ai_api_cache[file_hash] = None
+    return new_results
 
 
 def get_model_version(_id):

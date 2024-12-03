@@ -5,11 +5,13 @@ from pathlib import Path
 from tqdm import tqdm
 from PIL import Image
 import gradio as gr
+import threading
 import shutil
 import glob
 import json
 import re
 import os
+
 
 previewable_types = ['LORA', 'LoCon', 'Hypernetwork', 'TextualInversion', 'Checkpoint']
 actionable_types = ['LORA', 'LoCon', 'Hypernetwork', 'TextualInversion', 'Checkpoint']
@@ -22,9 +24,15 @@ base_model_version = {
     # 'Illustrious': 'SDXL',
     'SD 3': 'SD3',
 }
+lock = threading.Lock()
 
 
 def load_info():
+    with lock:
+        return load_info_inner()
+
+
+def load_info_inner():
     civitai.log('Check resources for missing info files')
     resources = civitai.load_resource_list()
     resources = [r for r in resources if r['type'] in actionable_types]
@@ -34,22 +42,25 @@ def load_info():
     civitai.log(f'Found {len(missing_info)} resources missing info files')
     hashes = [r['hash'] for r in missing_info]
 
-    # split hashes into batches of 100 and fetch into results
-    results = []
-    try:
-        for i in range(0, len(hashes), 100):
-            batch = hashes[i:i + 100]
-            results.extend(civitai.get_all_by_hash(batch))
-
-    except Exception:
-        errors.report('Failed to fetch info from Civitai', exc_info=True)
-        return
+    # # split hashes into batches of 100 and fetch into results
+    # results = []
+    # try:
+    #     for i in range(0, len(hashes), 100):
+    #         batch = hashes[i:i + 100]
+    #         results.extend(civitai.get_all_by_hash(batch))
+    #
+    #
+    #
+    # except Exception:
+    #     errors.report('Failed to fetch info from Civitai', exc_info=True)
+    #     return
+    results = civitai.get_all_by_hash_with_cache(hashes)
 
     if not results:
         civitai.log('No info found on Civitai')
         return
 
-    results = sorted(results, key=lambda x: datetime.fromisoformat(x['createdAt'].rstrip('Z')), reverse=True)
+    # results = sorted(results, key=lambda x: datetime.fromisoformat(x['createdAt'].rstrip('Z')), reverse=True)
 
     civitai.log(f'Found {len(results)} hash matches')
 
@@ -87,7 +98,7 @@ def load_info():
             description = f"{r.get('model', {}).get('name', '')}\n{r.get('name', '')}"
             data = {
                 'description': cc.convert(description),
-                'activation text': ', '.join(trained_words),
+                'activation text': ', '.join([prompt.strip() for prompts in trained_words for prompt in prompts.split(',')]),
                 # 'preferred weight': 0.8,
                 'notes': notes,
                 'civitai_metadata': r
@@ -158,6 +169,11 @@ def select_preview(image_list):
 
 
 def load_previews_v2():
+    with lock:
+        return load_previews_v2_inner()
+
+
+def load_previews_v2_inner():
     re_download_preview_from_cache()
 
     # nsfw_previews = shared.opts.civitai_nsfw_previews
