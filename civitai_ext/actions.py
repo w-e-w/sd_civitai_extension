@@ -1,5 +1,5 @@
 from . import lib as civitai, opencc_utils
-from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from modules import errors, images
 from pathlib import Path
 from tqdm import tqdm
@@ -147,10 +147,17 @@ def get_all_missing_previews():
 def re_download_preview_from_cache():
     gr.Info('Scanning for missing preview images')
     if missing_images_url_dest := set(get_all_missing_previews()):
-        with tqdm(total=len(missing_images_url_dest)) as pbar:
-            for url, dest in missing_images_url_dest:
-                civitai.download_image_auto_file_type(url, dest, pbar)
-                pbar.update()
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            with tqdm(total=len(missing_images_url_dest)) as pbar:
+                futures = [
+                    executor.submit(civitai.download_image_auto_file_type, url, dest, pbar)
+                    for url, dest in missing_images_url_dest
+                ]
+                for future in as_completed(futures):
+                    try:
+                        future.result()
+                    finally:
+                        pbar.update(1)
         gr.Info('Finished fetching preview images from Civitai')
     else:
         gr.Info('No missing preview images found')
