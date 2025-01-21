@@ -27,9 +27,14 @@ base_model_version = {
 lock = threading.Lock()
 
 
+def show_finished():
+    gr.Info('Civitai: Finished')
+
+
 def load_info():
     with lock:
-        return load_info_inner()
+        load_info_inner()
+    show_finished()
 
 
 def load_info_inner():
@@ -118,8 +123,10 @@ def load_info_inner():
 
 
 def run_get_info():
-    load_info()
-    load_previews_v2()
+    with lock:
+        load_info_inner()
+        load_previews_v2_inner()
+    show_finished()
 
 
 def get_all_missing_previews():
@@ -145,7 +152,6 @@ def get_all_missing_previews():
 
 
 def re_download_preview_from_cache():
-    gr.Info('Scanning for missing preview images')
     if missing_images_url_dest := set(get_all_missing_previews()):
         with ThreadPoolExecutor(max_workers=10) as executor:
             with tqdm(total=len(missing_images_url_dest)) as pbar:
@@ -159,8 +165,6 @@ def re_download_preview_from_cache():
                     finally:
                         pbar.update(1)
         gr.Info('Finished fetching preview images from Civitai')
-    else:
-        gr.Info('No missing preview images found')
 
 
 def select_preview(image_list):
@@ -177,14 +181,14 @@ def select_preview(image_list):
 
 def load_previews_v2():
     with lock:
-        return load_previews_v2_inner()
+        load_previews_v2_inner()
+    show_finished()
 
 
 def load_previews_v2_inner():
     re_download_preview_from_cache()
 
     # nsfw_previews = shared.opts.civitai_nsfw_previews
-    gr.Info('Updating preview images from preview images')
 
     resources = civitai.load_resource_list()
     resources = [r for r in resources if r['type'] in previewable_types]
@@ -205,5 +209,3 @@ def load_previews_v2_inner():
             preview_path = img.with_stem(img.stem.rpartition(".")[0])
             if not preview_path.exists():
                 shutil.copy(img, preview_path)
-
-    gr.Info('Finished updating preview images from preview images')
