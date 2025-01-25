@@ -27,11 +27,16 @@ base_model_version = {
 lock = threading.Lock()
 
 
+def show_started():
+    gr.Info('Civitai: Started')
+
+
 def show_finished():
     gr.Info('Civitai: Finished')
 
 
 def load_info():
+    show_started()
     with lock:
         load_info_inner()
     show_finished()
@@ -123,6 +128,7 @@ def load_info_inner():
 
 
 def run_get_info():
+    show_started()
     with lock:
         load_info_inner()
         load_previews_v2_inner()
@@ -180,6 +186,7 @@ def select_preview(image_list):
 
 
 def load_previews_v2():
+    show_started()
     with lock:
         load_previews_v2_inner()
     show_finished()

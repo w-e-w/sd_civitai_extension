@@ -1,5 +1,5 @@
 import gradio as gr
-from civitai_ext import actions, opencc_utils
+from civitai_ext import actions, opencc_utils, mhtml_button
 from modules import shared, script_callbacks
 
 
@@ -23,6 +23,8 @@ def on_ui_settings():
     shared.opts.add_option("civitai_get_previews", OptionButton('get preview', actions.load_previews_v2, section=section))
     shared.opts.add_option("civitai_convert_chinese", shared.OptionInfo('Disable', 'Convert chinese characters auto-generated description', gr.Dropdown, lambda: {'choices': opencc_utils.read_config()}, section=section, refresh=opencc_utils.install_opencc))
     # shared.opts.add_option("civitai_re_preview", OptionButton('re download previews from cache', actions.re_download_preview_from_cache, section=section))
+    # shared.opts.add_option("civitai_open_local_mhtml", shared.OptionInfo(True, "Add button to open local mhtml if available", section=section))
 
 
 script_callbacks.on_ui_settings(on_ui_settings)
+script_callbacks.on_app_started(mhtml_button.add_api)
