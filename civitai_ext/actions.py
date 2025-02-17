@@ -115,8 +115,10 @@ def load_info_inner():
                 continue
 
             for resource in matches:
-                Path(resource['path']).with_suffix('.json').write_text(json.dumps(data, indent=4, ensure_ascii=False))
-
+                Path(resource['path']).with_suffix('.json').write_text(
+                    json.dumps(data, indent=4, ensure_ascii=False), 
+                    encoding='utf-8'
+                )
             updated += 1
 
     civitai.log(f'Updated {updated} info files')
