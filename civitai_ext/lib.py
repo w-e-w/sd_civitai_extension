@@ -18,7 +18,7 @@ from modules.paths import models_path
 base_url = shared.cmd_opts.civitai_endpoint
 user_agent = 'CivitaiLink:Automatic1111'
 download_chunk_size = 8192
-
+bar_format = '{l_bar}{bar:25}{r_bar}{bar:-10b}'
 
 image_extensions = ['.jpeg', '.png', '.jpg', '.gif', '.webp', '.avif']
 preview_extensions = image_extensions + ['.mp4', '.webm']
@@ -317,7 +317,7 @@ def download_image_auto_file_type(url, dest, total_pbar: tqdm = None):
     with io.BytesIO() as file_like_object:
         try:
             current = 0
-            with tqdm(total=total, unit='B', unit_scale=True, unit_divisor=1024, delay=2) as bar:
+            with tqdm(total=total, unit='B', unit_scale=True, unit_divisor=1024, dynamic_ncols=True, bar_format=bar_format, leave=False) as bar:
                 for data in response.iter_content(chunk_size=download_chunk_size):
                     current += len(data)
                     file_like_object.write(data)

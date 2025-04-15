@@ -156,7 +156,7 @@ def get_all_missing_previews():
 def re_download_preview_from_cache():
     if missing_images_url_dest := set(get_all_missing_previews()):
         with ThreadPoolExecutor(max_workers=10) as executor:
-            with tqdm(total=len(missing_images_url_dest)) as pbar:
+            with tqdm(total=len(missing_images_url_dest), dynamic_ncols=True, bar_format=civitai.bar_format) as pbar:
                 futures = [
                     executor.submit(civitai.download_image_auto_file_type, url, dest, pbar)
                     for url, dest in missing_images_url_dest
