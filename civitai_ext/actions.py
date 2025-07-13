@@ -171,12 +171,16 @@ def re_download_preview_from_cache():
 
 def select_preview(image_list):
     for img_path in image_list:
+        MAX_IMAGE_PIXELS = Image.MAX_IMAGE_PIXELS
+        Image.MAX_IMAGE_PIXELS = None
         try:
             geninfo, items = images.read_info_from_image(Image.open(img_path))
             if geninfo:
                 return img_path
         except Exception:
             errors.report(f'Error reading image {img_path}', exc_info=True)
+        finally:
+            Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
 
     return image_list[0]
 
