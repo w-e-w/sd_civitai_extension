@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import List
 from tqdm import tqdm
 import gradio as gr
+import threading
 import filetype
 import requests
 import json
@@ -23,13 +24,23 @@ bar_format = '{l_bar}{bar:25}{r_bar}{bar:-10b}'
 image_extensions = ['.jpeg', '.png', '.jpg', '.gif', '.webp', '.avif']
 preview_extensions = image_extensions + ['.mp4', '.webm', '.mov']
 civil_ai_api_cache = cache.cache('civil_ai_api_sha256')
+input_lock = threading.Lock()
+
+
+def ask_valid_user_input(message, valid_input=('y', 'n')):
+    while True:
+        with input_lock:
+            tqdm.write(message, end='')
+            user_input = input().strip().lower()
+            if user_input in valid_input:
+                return user_input
 
 
 # endregion
 # region Utils
 def log(message):
     """Log a message to the console."""
-    print(f'Civitai: {message}')
+    tqdm.write(f'Civitai: {message}')
 
 
 # region API
@@ -280,13 +291,9 @@ def get_request_stream(url):
             time.sleep(1)
 
         if response.status_code != 200:
-            return response
-            user_input = input('Press Enter to retry, Enter "s" to skip: ').strip()
-            if user_input.strip().lower() == 's':
+            if ask_valid_user_input('Press Enter to retry, Enter "s" to skip: ', valid_input=('', 's')) == 's':
                 return response
-            elif user_input:
-                url = user_input
-                print(f"Retrying with new URL: {url}")
+            tqdm.write(f"Retrying with new URL: {url}")
 
 
 def test_image_type(image_path):
@@ -300,13 +307,10 @@ def download_image_auto_file_type(url, dest, total_pbar: tqdm = None):
     dest = Path(dest)
 
     original_true_url = re_uuid_v4.sub(r'\1original=true', url)
-    # log(f'Downloading: "{original_true_url}" to {dest.with_suffix("")}')
     if total_pbar is not None:
         total_pbar.set_postfix_str(f'{original_true_url} -> {dest.with_suffix("")}')
     response = get_request_stream(original_true_url)
-    # print('\n\ntest error')
     if response.status_code != 200:
-        print('\n')
         log(f'Failed to download {original_true_url} {response.status_code}')
         return
 
@@ -324,7 +328,6 @@ def download_image_auto_file_type(url, dest, total_pbar: tqdm = None):
                     bar.update(len(data))  # Update with the length of the data written
 
         except Exception as e:
-            print('\n')
             log(f'Failed to download {original_true_url} {e}')
 
         try:
@@ -333,15 +336,13 @@ def download_image_auto_file_type(url, dest, total_pbar: tqdm = None):
                 dest = dest.with_suffix(real_img_type)
 
             if dest.exists():
-                override_choice = input(f"\nFile already exists: {str(dest)}overwrite Y/N?\n").strip().lower()
-                if override_choice.strip() != 'y':
+                override_choice = ask_valid_user_input(f"File already exists: {str(dest)} overwrite Y/N?: ")
+                if override_choice != 'y':
                     return
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_bytes(file_like_object.getvalue())
             if dest.suffix not in preview_extensions:
                 message = f'Warning: Not unexpected file type {str(dest)}\nPress Enter to continue'
                 gr.Warning(message)
-                input(f'\n{message}\nPress Enter to continue')
         except Exception as e:
-            print(f'\n')
             log(f'Failed to download {original_true_url} {e}')
